@@ -340,7 +340,6 @@ done
 Run the following command to select the optimal query target for each conversational context, based on query--document and query-conversation relevance scores.
 The selected query file will be stored in `./data/procis/queries`.
 ```bash
-
 mode=q2d_q2c
 doc_len=512
 
@@ -354,7 +353,7 @@ python query_filter.py \
 ```
 
 #### WebDisc
-Similarly, running the following command produces she selected query file stored in `./data/webdisc/queries`.
+Similarly, running the following command produces the selected query file stored in `./data/webdisc/queries`.
 ```bash
 mode=q2d_q2c
 doc_len=512
