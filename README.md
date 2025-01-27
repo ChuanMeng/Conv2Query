@@ -252,6 +252,7 @@ done
 
 #### ProCIS
 
+```bash
 mode=q2C
 doc_len=512
 
@@ -285,11 +286,11 @@ nohup python -m tevatron.reranker.driver.rerank \
   --rerank_output_path ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.txt \
   > procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.log 2>&1 &
 done
+```
 
 #### WebDisc
 
 ```bash
-
 mode=q2c
 doc_len=512
 
