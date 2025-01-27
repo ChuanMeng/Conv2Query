@@ -19,7 +19,7 @@ pip install -r requirements.txt
 
 ## 1.2 Data preparation 
 
-### [ProCIS](https://dl.acm.org/doi/10.1145/3626772.3657869)
+### The [ProCIS](https://dl.acm.org/doi/10.1145/3626772.3657869) dataset (published at SIGIR 2024)
 Please download the raw data and then put the raw data in the directory of `./data/procis/raw`:
 ```bash
 mkdir data
@@ -47,7 +47,7 @@ Next, execute the script to preprocess the ProCIS dataset:
 python -u ./preprocess_procis.py
 ```
 
-### [WebDisc](https://dl.acm.org/doi/10.1145/3578337.3605139)
+### The [WebDisc](https://dl.acm.org/doi/10.1145/3578337.3605139) dataset  (published at ICTIR 2023)
 Please ask the original authors of WebDisc to get the raw data, and then put the data in the directory of `./data/webdisc/raw`. After decompressing, execute the script to preprocess the ProCIS dataset:
 ```bash
 mkdir data/webdisc
