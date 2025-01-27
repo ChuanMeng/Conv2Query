@@ -6,7 +6,12 @@ This repository is structured into the following parts:
 1. Prerequisite
    * 1.1 Install dependencies
    * 1.2 Data preparation
-2. Conv2Query
+2. Produce pseudo ad-hoc query targets for training
+   * 2.1 Generating ad-hoc queries from documents
+   * 2.2 Query filtering based on document relevance and conversation alignment (QF-DC)
+3. Learning to generate ad-hoc queries from conversations
+4. Generating ad-hoc queries for retrieval (inference)
+5. Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (Optional)
 
 
 
@@ -16,6 +21,13 @@ This repository is structured into the following parts:
 ```bash
 pip install -r requirements.txt
 ```
+
+We directly fetch weights of LLMs from Hugging Face. Please set your own token and your cache directory:
+```bash
+export TOKEN={your token to use as HTTP bearer authorization for remote files}
+export CACHE_DIR={your cache path that stores the weights of LLMs}
+```
+All experiments are conducted on 4 NVIDIA A100 GPUs (40GB).
 
 ## 1.2 Data preparation 
 
@@ -35,20 +47,16 @@ mkdir data/procis/training
 
 wget -P ./data/procis/raw https://archive.org/download/procis/procis.zip
 unzip ./data/procis/raw/procis.zip -d ./data/procis/raw/
-mv ./data/procis/raw/procis/procis/collection.jsonl ./data/procis/raw/collection.jsonl
-mv ./data/procis/raw/procis/procis/dev.jsonl ./data/procis/raw/dev.jsonl
-mv ./data/procis/raw/procis/procis/future_dev.jsonl ./data/procis/raw/future_dev.jsonl
-mv ./data/procis/raw/procis/procis/test.jsonl ./data/procis/raw/test.jsonl
-mv ./data/procis/raw/procis/procis/train.jsonl ./data/procis/raw/train.jsonl
 ```
 
-Next, execute the script to preprocess the ProCIS dataset:
+Next, run the script to preprocess the ProCIS dataset:
 ```bash
 python -u ./preprocess_procis.py
 ```
+The preprocessing will produce TREC-style queries and qrels stored in `data/procis/queries` and `data/procis/qrels`, respectively. And it will produce Pyserini-style and Tevatron-style corpus files stored in `data/procis/corpus`.
 
 ### The [WebDisc](https://dl.acm.org/doi/10.1145/3578337.3605139) dataset  (published at ICTIR 2023)
-Please ask the original authors of WebDisc to get the raw data, and then put the data in the directory of `./data/webdisc/raw`. After decompressing, execute the script to preprocess the ProCIS dataset:
+Please ask the original author Kevin Ros (kjros2@illinois.edu) of WebDisc to get the raw data, and then put the data in the directory of `./data/webdisc/raw`. After decompressing, execute the script to preprocess the ProCIS dataset:
 ```bash
 mkdir data/webdisc
 mkdir data/webdisc/raw
@@ -63,24 +71,106 @@ mkdir data/webdisc/training
 tar -xvf ./data/webdisc/raw/webpages_v3.tar.gz -C ./data/webdisc/raw/
 ```
 
+Next, run the script to preprocess the Webdisc dataset:
 ```bash
 python -u ./preprocess_webdisc.py
 ```
+The preprocessing will produce TREC-style queries and qrels stored in `data/webdisc/queries` and `data/webdisc/qrels`, respectively. And it will produce Pyserini-style and Tevatron-style corpus files stored in `data/webdisc/corpus`.
 
 
-## 2. 📜 Generating ad-hoc queries from documents
+# 📜 2. Produce pseudo ad-hoc query targets for training
+
+## 2.1 Generating ad-hoc queries from documents
+Please use the following commands to run [Doc2Query-T5](https://huggingface.co/BeIR/query-gen-msmarco-t5-large-v1) to generate 100 ad-hoc queries per relevant document for each conversational context.
+Alternatively, we provide the scrip to run [Doc2Query-Llama2](https://huggingface.co/soyuj/llama2-doc2query) to generate 70 queries per relevant document; We set the number of query to 70 because the GPU memory limitation. 
+```
+for i in 0 1 2 3
+do
+gpu_id=$((i + 4)) 
+CUDA_VISIBLE_DEVICES=${gpu_id} \
+nohup python -u doct5query.py \
+--corpus_dir ./data/procis/corpus/procis.corpus.jsonl/procis.corpus.jsonl \
+--qrels_dir ./data/procis/qrels/procis.train-filtered1000.qrels.turn-link.txt \
+--output_dir ./data/procis/queries \
+--batch_size 2 \
+--query_num 100 \
+--max_input_length 512 \
+--num_chunks 4 \
+--local_rank ${i} \
+> procis.train.queries.doct5query-100.chunk${i}.log 2>&1 &
+done
+
+for i in 0 1 2 3
+do
+gpu_id=$((i + 4)) 
+CUDA_VISIBLE_DEVICES=${gpu_id} \
+nohup python -u docllamaquery.py \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--corpus_dir ./data/procis/corpus/procis.corpus.jsonl/procis.corpus.jsonl \
+--qrels_dir ./data/procis/qrels/procis.train-filtered1000.qrels.turn-link.txt \
+--output_dir ./data/procis/queries \
+--batch_size 1 \
+--query_num 70 \
+--max_input_length 512 \
+--chunk ${i} \
+> procis.train-filtered1000.queries.docllama2query-70-topk10.chunk${i}.log 2>&1 &
+done
+```
+
+```
+for i in 0 1 2 3
+do
+gpu_id=$((i + 4)) 
+CUDA_VISIBLE_DEVICES=${gpu_id} \
+nohup python -u doct5query.py \
+--corpus_dir ./data/webdisc/corpus/webdisc.corpus.jsonl/webdisc.corpus.jsonl \
+--qrels_dir ./data/webdisc/qrels/webdisc.train.qrels.txt \
+--output_dir ./data/webdisc/queries \
+--batch_size 2 \
+--query_num 100 \
+--max_input_length 512 \
+--num_chunks 4 \
+--local_rank ${i} \
+> webdisc.train.queries.doct5query-100.chunk${i}.log 2>&1 &
+done
+
+for i in 0 1 2 3
+do
+gpu_id=$((i + 4)) 
+CUDA_VISIBLE_DEVICES=${gpu_id} \
+nohup python -u docllamaquery.py \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--corpus_dir ./data/webdisc/corpus/webdisc.corpus.jsonl/webdisc.corpus.jsonl \
+--qrels_dir ./data/webdisc/qrels/webdisc.train.qrels.txt \
+--output_dir ./data/webdisc/queries \
+--batch_size 1 \
+--query_num 70 \
+--max_input_length 512 \
+--num_chunks 4 \
+--local_rank ${i} \
+> webdisc.train.queries.docllama2query-100.chunk${i}.log 2>&1 &
+done
+```
+
+## 2.2. 🔬 Query filtering based on document relevance and conversation alignment (QF-DC)
+
+### 2.2.1
+
+### 2.2.2
+
+### 2.2.3
 
 
-## 3. 🔬 Query filtering based on document relevance and conversation alignment (QF-DC)
+
+## 3. 🚀 Learning to generate ad-hoc queries from conversations
 
 
-## 4. 🚀 Learning to generate ad-hoc queries from conversations
+## 4. 🔎 Generating ad-hoc queries for retrieval (inference)
 
 
-## 5. 🔎 Generating ad-hoc queries for retrieval (inference)
-
-
-## 6. 🎨 Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (Optional)
+## 5. 🎨 Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (Optional)
 
 
 
