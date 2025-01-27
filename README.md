@@ -21,6 +21,7 @@ This repository is structured into the following parts:
 ```bash
 pip install -r requirements.txt
 ```
+Please install [Tevatron](https://github.com/texttron/tevatron) in advance.
 
 We directly fetch weights of LLMs from Hugging Face. Please set your own token and your cache directory:
 ```bash
@@ -46,7 +47,7 @@ mkdir data/procis/fillter
 mkdir data/procis/training
 
 wget -P ./data/procis/raw https://archive.org/download/procis/procis.zip
-unzip ./data/procis/raw/procis.zip -d ./data/procis/raw/
+UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE unzip ./data/procis/raw/procis.zip -d ./data/procis/raw/
 ```
 
 Next, run the script to preprocess the ProCIS dataset:
@@ -78,7 +79,7 @@ python -u ./preprocess_webdisc.py
 The preprocessing will produce TREC-style queries and qrels stored in `data/webdisc/queries` and `data/webdisc/qrels`, respectively. And it will produce Pyserini-style and Tevatron-style corpus files stored in `data/webdisc/corpus`.
 
 
-# 📜 2. Producing pseudo ad-hoc query targets for training
+## 📜 2. Producing pseudo ad-hoc query targets for training
 
 ## 2.1 Generating ad-hoc queries from documents
 
@@ -89,7 +90,7 @@ Alternatively, we provide the script to run [Doc2Query-Llama2](https://huggingfa
 # Doc2Query-T5
 for i in 0 1 2 3
 do
-gpu_id=$((i + 4)) 
+gpu_id=$((i)) 
 CUDA_VISIBLE_DEVICES=${gpu_id} \
 nohup python -u doct5query.py \
 --corpus_dir ./data/procis/corpus/procis.corpus.jsonl/procis.corpus.jsonl \
@@ -106,7 +107,7 @@ done
 # Doc2Query-Llama2
 for i in 0 1 2 3
 do
-gpu_id=$((i + 4)) 
+gpu_id=$((i)) 
 CUDA_VISIBLE_DEVICES=${gpu_id} \
 nohup python -u docllamaquery.py \
 --token ${TOKEN} \
@@ -131,7 +132,7 @@ The following operations are similar to ProCIS:
 # Doc2Query-T5
 for i in 0 1 2 3
 do
-gpu_id=$((i + 4)) 
+gpu_id=$((i)) 
 CUDA_VISIBLE_DEVICES=${gpu_id} \
 nohup python -u doct5query.py \
 --corpus_dir ./data/webdisc/corpus/webdisc.corpus.jsonl/webdisc.corpus.jsonl \
@@ -148,7 +149,7 @@ done
 # Doc2Query-Llama2
 for i in 0 1 2 3
 do
-gpu_id=$((i + 4)) 
+gpu_id=$((i)) 
 CUDA_VISIBLE_DEVICES=${gpu_id} \
 nohup python -u docllamaquery.py \
 --token ${TOKEN} \
@@ -167,13 +168,13 @@ done
 The generated queries will be stored in `data/webdisc/queries`.
 
 ## 2.2. 🔬 Query filtering based on document relevance and conversation alignment (QF-DC)
+For predicting query--document relevance and query--conversation relevance, we use [RepLLaMA](https://huggingface.co/castorini/repllama-v1-7b-lora-passage) as our relevance model. We use the Tevatron package.
 
 ### 2.2.1 Query--document relevance
-For 
 
 #### ProCIS
 
-
+Run the following commands to prepare inputs of the relevance model, and conduct query--document relevance prediction on ProCIS:
 ```bash
 mode=q2d
 doc_len=512
@@ -211,6 +212,7 @@ done
 ```
 
 #### WebDisc
+Similarly, conduct query--document relevance prediction on WebDisc:
 
 ```bash
 mode=q2d
@@ -252,6 +254,7 @@ done
 
 #### ProCIS
 
+Run the following commands to prepare inputs of the relevance model, and conduct query--conversation relevance prediction on ProCIS:
 ```bash
 mode=q2C
 doc_len=512
@@ -260,7 +263,7 @@ doc_len=512
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
-    --corpus_dir ./data/procis/corpus/procis.corpus-tevatron.jsonl \
+    --corpus_dir ./data/procis/corpus/procis.train-filtered1000.queries.cur.jsonl \
     --query_dir ./data/procis/queries/procis.train-filtered1000.queries.doct5query-100.chunk${i}.jsonl \
     --output_dir ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-${mode}-rank_input.chunk${i}.jsonl \
     --qrels_dir ./data/procis/qrels/procis.train-filtered1000.qrels.turn-link.txt \
@@ -279,7 +282,7 @@ nohup python -m tevatron.reranker.driver.rerank \
   --dataset_path ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-${mode}-rank_input.chunk${i}.jsonl \
   --fp16 \
   --per_device_eval_batch_size 32 \
-  --rerank_max_len $(( 32 + 512 )) \
+  --rerank_max_len $(( 32 + ${doc_len} )) \
   --dataset_name json \
   --query_prefix "query: " \
   --passage_prefix "document: " \
@@ -290,6 +293,7 @@ done
 
 #### WebDisc
 
+Similarly, conduct query--conversation relevance prediction on WebDisc:
 ```bash
 mode=q2c
 doc_len=512
@@ -298,7 +302,7 @@ doc_len=512
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
-    --corpus_dir ./data/webdisc/corpus/webdisc.corpus-tevatron.jsonl \
+    --corpus_dir ./data/webdisc/queries/webdisc.train.queries.cur.jsonl \
     --query_dir ./data/webdisc/queries/webdisc.train.queries.doct5query-100.chunk${i}.jsonl \
     --output_dir ./data/webdisc/filter/webdisc.train.queries.doct5query-100-${mode}-rank_input.chunk${i}.jsonl \
     --qrels_dir ./data/webdisc/qrels/webdisc.train.qrels.txt \
@@ -317,7 +321,7 @@ nohup python -m tevatron.reranker.driver.rerank \
   --dataset_path ./data/webdisc/filter/webdisc.train.queries.doct5query-100-${mode}-rank_input.chunk${i}.jsonl \
   --fp16 \
   --per_device_eval_batch_size 32 \
-  --rerank_max_len $(( 32 + 512 )) \
+  --rerank_max_len $(( 32 + ${doc_len} )) \
   --dataset_name json \
   --query_prefix "query: " \
   --passage_prefix "document: " \
