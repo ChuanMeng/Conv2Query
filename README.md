@@ -86,6 +86,7 @@ The preprocessing will produce TREC-style queries and qrels stored in `data/webd
 ### ProCIS
 Please use the following commands to run [Doc2Query-T5](https://huggingface.co/BeIR/query-gen-msmarco-t5-large-v1) to generate 100 ad-hoc queries per relevant document for each conversational context.
 Alternatively, we provide the script to run [Doc2Query-Llama2](https://huggingface.co/soyuj/llama2-doc2query) to generate 70 queries per relevant document; we set the number of query to 70 because the GPU memory limitation. 
+The generated queries will be stored in `data/procis/queries`.
 ```bash
 # Doc2Query-T5
 for i in 0 1 2 3
@@ -122,11 +123,9 @@ nohup python -u docllamaquery.py \
 > procis.train-filtered1000.queries.docllama2query-70-topk10.chunk${i}.log 2>&1 &
 done
 ```
-The generated queries will be stored in `data/procis/queries`.
 
 ### WebDisc
-The following operations are similar to ProCIS:
-
+The following operations are similar to ProCIS. The generated queries will be stored in `data/webdisc/queries`.
 
 ```bash
 # Doc2Query-T5
@@ -165,7 +164,6 @@ nohup python -u docllamaquery.py \
 > webdisc.train.queries.docllama2query-100.chunk${i}.log 2>&1 &
 done
 ```
-The generated queries will be stored in `data/webdisc/queries`.
 
 ## 2.2. 🔬 Query filtering based on document relevance and conversation alignment (QF-DC)
 For predicting query--document relevance and query--conversation relevance, we use [RepLLaMA](https://huggingface.co/castorini/repllama-v1-7b-lora-passage) as our relevance model. We use the Tevatron package.
@@ -174,12 +172,13 @@ For predicting query--document relevance and query--conversation relevance, we u
 
 #### ProCIS
 
-Run the following commands to prepare inputs of the relevance model, and conduct query--document relevance prediction on ProCIS:
+Run the following commands to prepare inputs of the relevance model, and conduct query--document relevance prediction on ProCIS.
+The relevance score file will be stored in `./data/procis/filter/`.
 ```bash
 mode=q2d
 doc_len=512
 
-# generate re-ranking input file
+# generate relevance prediction input file
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
@@ -190,7 +189,7 @@ python prepare_rerank_file.py \
     --mode ${mode}
 done
 
-# run re-ranking
+# run relevance prediction
 for i in 0 1 2 3
 do
 gpu_id=$((i)) 
@@ -212,13 +211,14 @@ done
 ```
 
 #### WebDisc
-Similarly, conduct query--document relevance prediction on WebDisc:
+Similarly, conduct query--document relevance prediction on WebDisc.
+The relevance score file will be stored in `./data/webdisc/filter/`.
 
 ```bash
 mode=q2d
 doc_len=512
 
-# generate re-ranking input file
+# generate relevance prediction input file
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
@@ -229,7 +229,7 @@ python prepare_rerank_file.py \
     --mode ${mode}
 done
 
-# run re-ranking
+# run relevance prediction
 for i in 0 1 2 3
 do
 gpu_id=$((i)) 
@@ -254,23 +254,24 @@ done
 
 #### ProCIS
 
-Run the following commands to prepare inputs of the relevance model, and conduct query--conversation relevance prediction on ProCIS:
+Run the following commands to prepare inputs of the relevance model, and conduct query--conversation relevance prediction on ProCIS.
+The relevance score file will be stored in `./data/procis/filter/`.
 ```bash
 mode=q2C
 doc_len=512
 
-# generate re-ranking input file
+# generate relevance prediction input file
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
-    --corpus_dir ./data/procis/corpus/procis.train-filtered1000.queries.cur.jsonl \
+    --corpus_dir ./data/procis/corpus/procis.train-filtered1000.queries.cur.jsonl \ # we use the current user utterance representing the conversational context
     --query_dir ./data/procis/queries/procis.train-filtered1000.queries.doct5query-100.chunk${i}.jsonl \
     --output_dir ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-${mode}-rank_input.chunk${i}.jsonl \
     --qrels_dir ./data/procis/qrels/procis.train-filtered1000.qrels.turn-link.txt \
     --mode ${mode}
 done
 
-# run re-ranking
+# run relevance prediction
 for i in 0 1 2 3
 do
 gpu_id=$((i)) 
@@ -293,23 +294,24 @@ done
 
 #### WebDisc
 
-Similarly, conduct query--conversation relevance prediction on WebDisc:
+Similarly, conduct query--conversation relevance prediction on WebDisc.
+The relevance score file will be stored in `./data/webdisc/filter/`.
 ```bash
 mode=q2c
 doc_len=512
 
-# generate re-ranking input file
+# generate relevance prediction input file
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
-    --corpus_dir ./data/webdisc/queries/webdisc.train.queries.cur.jsonl \
+    --corpus_dir ./data/webdisc/queries/webdisc.train.queries.cur.jsonl \ # we use the current user utterance representing the conversational context
     --query_dir ./data/webdisc/queries/webdisc.train.queries.doct5query-100.chunk${i}.jsonl \
     --output_dir ./data/webdisc/filter/webdisc.train.queries.doct5query-100-${mode}-rank_input.chunk${i}.jsonl \
     --qrels_dir ./data/webdisc/qrels/webdisc.train.qrels.txt \
     --mode ${mode}
 done
 
-# run re-ranking
+# run relevance prediction
 for i in 0 1 2 3
 do
 gpu_id=$((i)) 
@@ -331,9 +333,12 @@ done
 ```
 
 
-### 2.2.3 Score aggregation
+### 2.2.3 Query selection
 
 #### ProCIS
+
+Run the following command to select the optimal query target for each conversational context, based on query--document and query-conversation relevance scores.
+The selected query file will be stored in `./data/procis/queries`.
 ```bash
 
 mode=q2d_q2c
@@ -349,7 +354,7 @@ python query_filter.py \
 ```
 
 #### WebDisc
-
+Similarly, running the following command produces she selected query file stored in `./data/webdisc/queries`.
 ```bash
 mode=q2d_q2c
 doc_len=512
@@ -362,8 +367,6 @@ python query_filter.py \
 --qrels_dir ./data/webdisc/qrels/webdisc.train.qrels.txt \
 --num_chunks 4 --mode ${mode}
 ```
-
-
 
 ## 3. 🚀 Learning to generate ad-hoc queries from conversations
 
