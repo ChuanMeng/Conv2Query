@@ -85,7 +85,7 @@ The preprocessing will produce TREC-style queries and qrels stored in `data/webd
 ## 2.1.1 ProCIS
 Please use the following commands to run [Doc2Query-T5](https://huggingface.co/BeIR/query-gen-msmarco-t5-large-v1) to generate 100 ad-hoc queries per relevant document for each conversational context.
 Alternatively, we provide the script to run [Doc2Query-Llama2](https://huggingface.co/soyuj/llama2-doc2query) to generate 70 queries per relevant document; we set the number of query to 70 because the GPU memory limitation. 
-```
+```bash
 # Doc2Query-T5
 for i in 0 1 2 3
 do
@@ -121,11 +121,14 @@ nohup python -u docllamaquery.py \
 > procis.train-filtered1000.queries.docllama2query-70-topk10.chunk${i}.log 2>&1 &
 done
 ```
+The generated queries will be stored in `data/procis/queries`.
 
 ## 2.1.1 WebDisc
 The following operations are similar to ProCIS:
+
+
+```bash
 # Doc2Query-T5
-```
 for i in 0 1 2 3
 do
 gpu_id=$((i + 4)) 
@@ -161,6 +164,7 @@ nohup python -u docllamaquery.py \
 > webdisc.train.queries.docllama2query-100.chunk${i}.log 2>&1 &
 done
 ```
+The generated queries will be stored in `data/webdisc/queries`.
 
 ## 2.2. 🔬 Query filtering based on document relevance and conversation alignment (QF-DC)
 
