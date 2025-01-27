@@ -82,7 +82,7 @@ The preprocessing will produce TREC-style queries and qrels stored in `data/webd
 
 ## 2.1 Generating ad-hoc queries from documents
 
-## ProCIS
+### ProCIS
 Please use the following commands to run [Doc2Query-T5](https://huggingface.co/BeIR/query-gen-msmarco-t5-large-v1) to generate 100 ad-hoc queries per relevant document for each conversational context.
 Alternatively, we provide the script to run [Doc2Query-Llama2](https://huggingface.co/soyuj/llama2-doc2query) to generate 70 queries per relevant document; we set the number of query to 70 because the GPU memory limitation. 
 ```bash
@@ -123,7 +123,7 @@ done
 ```
 The generated queries will be stored in `data/procis/queries`.
 
-## WebDisc
+### WebDisc
 The following operations are similar to ProCIS:
 
 
@@ -169,13 +169,16 @@ The generated queries will be stored in `data/webdisc/queries`.
 ## 2.2. 🔬 Query filtering based on document relevance and conversation alignment (QF-DC)
 
 ### 2.2.1 Query--document relevance
+For 
 
 #### ProCIS
 
 
 ```bash
 mode=q2d
+doc_len=512
 
+# generate re-ranking input file
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
@@ -186,6 +189,7 @@ python prepare_rerank_file.py \
     --mode ${mode}
 done
 
+# run re-ranking
 for i in 0 1 2 3
 do
 gpu_id=$((i)) 
@@ -197,12 +201,12 @@ nohup python -m tevatron.reranker.driver.rerank \
   --dataset_path ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-${mode}-rank_input.chunk${i}.jsonl \
   --fp16 \
   --per_device_eval_batch_size 32 \
-  --rerank_max_len $(( 32 + 512 )) \
+  --rerank_max_len $(( 32 + ${doc_len} )) \
   --dataset_name json \
   --query_prefix "query: " \
   --passage_prefix "document: " \
-  --rerank_output_path ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama512.chunk${i}.txt \
-  > procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama512.chunk${i}.log 2>&1 &
+  --rerank_output_path ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.txt \
+  > procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.log 2>&1 &
 done
 ```
 
@@ -210,7 +214,9 @@ done
 
 ```bash
 mode=q2d
+doc_len=512
 
+# generate re-ranking input file
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
@@ -221,6 +227,7 @@ python prepare_rerank_file.py \
     --mode ${mode}
 done
 
+# run re-ranking
 for i in 0 1 2 3
 do
 gpu_id=$((i)) 
@@ -232,12 +239,12 @@ nohup python -m tevatron.reranker.driver.rerank \
   --dataset_path ./data/webdisc/filter/webdisc.train.queries.doct5query-100-${mode}-rank_input.chunk${i}.jsonl \
   --fp16 \
   --per_device_eval_batch_size 32 \
-  --rerank_max_len $(( 32 + 512 )) \
+  --rerank_max_len $(( 32 + ${doc_len} )) \
   --dataset_name json \
   --query_prefix "query: " \
   --passage_prefix "document: " \
-  --rerank_output_path ./data/webdisc/filter/webdisc.train.queries.doct5query-100-${mode}-rankllama512.chunk${i}.txt \
-  > webdisc.train.queries.doct5query-100-${mode}-rankllama512.chunk${i}.log 2>&1 &
+  --rerank_output_path ./data/webdisc/filter/webdisc.train.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.txt \
+  > webdisc.train.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.log 2>&1 &
 done
 ```
 
@@ -246,7 +253,9 @@ done
 #### ProCIS
 
 mode=q2C
+doc_len=512
 
+# generate re-ranking input file
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
@@ -257,6 +266,7 @@ python prepare_rerank_file.py \
     --mode ${mode}
 done
 
+# run re-ranking
 for i in 0 1 2 3
 do
 gpu_id=$((i)) 
@@ -272,14 +282,18 @@ nohup python -m tevatron.reranker.driver.rerank \
   --dataset_name json \
   --query_prefix "query: " \
   --passage_prefix "document: " \
-  --rerank_output_path ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama512.chunk${i}.txt \
-  > procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama512.chunk${i}.log 2>&1 &
+  --rerank_output_path ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.txt \
+  > procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.log 2>&1 &
 done
 
 #### WebDisc
 
 ```bash
+
 mode=q2c
+doc_len=512
+
+# generate re-ranking input file
 for i in 0 1 2 3
 do
 python prepare_rerank_file.py \
@@ -290,6 +304,7 @@ python prepare_rerank_file.py \
     --mode ${mode}
 done
 
+# run re-ranking
 for i in 0 1 2 3
 do
 gpu_id=$((i)) 
@@ -305,38 +320,40 @@ nohup python -m tevatron.reranker.driver.rerank \
   --dataset_name json \
   --query_prefix "query: " \
   --passage_prefix "document: " \
-  --rerank_output_path ./data/webdisc/filter/webdisc.train.queries.doct5query-100-${mode}-rankllama512.chunk${i}.txt \
-  > webdisc.train.queries.doct5query-100-${mode}-rankllama512.chunk${i}.log 2>&1 &
+  --rerank_output_path ./data/webdisc/filter/webdisc.train.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.txt \
+  > webdisc.train.queries.doct5query-100-${mode}-rankllama${doc_len}.chunk${i}.log 2>&1 &
 done
 ```
 
-q2d_rerank_dir
 
 ### 2.2.3 Score aggregation
 
-
 #### ProCIS
 ```bash
+
 mode=q2d_q2c
+doc_len=512
+
 python query_filter.py \
---query_dir ./data/procis/queries/procis.train.queries.doct5query-100 \
---q2d_rerank_dir ./data/procis/filter/procis.train.queries.doct5query-100-q2d-rankllama512 \
---q2c_rerank_dir ./data/procis/filter/procis.train.queries.doct5query-100-q2c-rankllama512 \
---output_dir ./data/procis/queries/procis.train.queries.doct5query-100-${mode}-rankllama512-1 \
+--query_dir ./data/procis/queries/procis.train-filtered1000.queries.doct5query-100 \
+--q2d_rerank_dir ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-q2d-rankllama${doc_len} \
+--q2c_rerank_dir ./data/procis/filter/procis.train-filtered1000.queries.doct5query-100-q2c-rankllama${doc_len} \
+--output_dir ./data/procis/queries/procis.train-filtered1000.queries.doct5query-100-${mode}-rankllama${doc_len}-1 \
 --qrels_dir ./data/procis/qrels/procis.train-filtered1000.qrels.turn-link.txt \
 --num_chunks 4 --mode ${mode}
 ```
-
 
 #### WebDisc
 
 ```bash
 mode=q2d_q2c
+doc_len=512
+
 python query_filter.py \
---query_dir ./data/webdisc/queries/webdisc.train-filtered1000.queries.doct5query-100 \
---q2d_rerank_dir ./data/webdisc/filter/webdisc.train-filtered1000.queries.doct5query-100-q2d-rankllama512 \
---q2c_rerank_dir ./data/webdisc/filter/webdisc.train-filtered1000.queries.doct5query-100-q2c-rankllama512 \
---output_dir ./data/webdisc/queries/webdisc.train-filtered1000.queries.doct5query-100-${mode}-rankllama512-1 \
+--query_dir ./data/webdisc/queries/webdisc.train.queries.doct5query-100 \
+--q2d_rerank_dir ./data/webdisc/filter/webdisc.train.queries.doct5query-100-q2d-rankllama${doc_len} \
+--q2c_rerank_dir ./data/webdisc/filter/webdisc.train.queries.doct5query-100-q2c-rankllama${doc_len} \
+--output_dir ./data/webdisc/queries/webdisc.train.queries.doct5query-100-${mode}-rankllama${doc_len}-1 \
 --qrels_dir ./data/webdisc/qrels/webdisc.train.qrels.txt \
 --num_chunks 4 --mode ${mode}
 ```
