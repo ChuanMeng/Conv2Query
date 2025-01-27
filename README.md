@@ -6,7 +6,7 @@ This repository is structured into the following parts:
 1. Prerequisite
    * 1.1 Install dependencies
    * 1.2 Data preparation
-2. Produce pseudo ad-hoc query targets for training
+2. Producing pseudo ad-hoc query targets for training
    * 2.1 Generating ad-hoc queries from documents
    * 2.2 Query filtering based on document relevance and conversation alignment (QF-DC)
 3. Learning to generate ad-hoc queries from conversations
@@ -78,12 +78,15 @@ python -u ./preprocess_webdisc.py
 The preprocessing will produce TREC-style queries and qrels stored in `data/webdisc/queries` and `data/webdisc/qrels`, respectively. And it will produce Pyserini-style and Tevatron-style corpus files stored in `data/webdisc/corpus`.
 
 
-# 📜 2. Produce pseudo ad-hoc query targets for training
+# 📜 2. Producing pseudo ad-hoc query targets for training
 
 ## 2.1 Generating ad-hoc queries from documents
+
+## 2.1.1 ProCIS
 Please use the following commands to run [Doc2Query-T5](https://huggingface.co/BeIR/query-gen-msmarco-t5-large-v1) to generate 100 ad-hoc queries per relevant document for each conversational context.
-Alternatively, we provide the scrip to run [Doc2Query-Llama2](https://huggingface.co/soyuj/llama2-doc2query) to generate 70 queries per relevant document; We set the number of query to 70 because the GPU memory limitation. 
+Alternatively, we provide the script to run [Doc2Query-Llama2](https://huggingface.co/soyuj/llama2-doc2query) to generate 70 queries per relevant document; we set the number of query to 70 because the GPU memory limitation. 
 ```
+# Doc2Query-T5
 for i in 0 1 2 3
 do
 gpu_id=$((i + 4)) 
@@ -100,6 +103,7 @@ nohup python -u doct5query.py \
 > procis.train.queries.doct5query-100.chunk${i}.log 2>&1 &
 done
 
+# Doc2Query-Llama2
 for i in 0 1 2 3
 do
 gpu_id=$((i + 4)) 
@@ -118,6 +122,9 @@ nohup python -u docllamaquery.py \
 done
 ```
 
+## 2.1.1 WebDisc
+The following operations are similar to ProCIS:
+# Doc2Query-T5
 ```
 for i in 0 1 2 3
 do
@@ -135,6 +142,7 @@ nohup python -u doct5query.py \
 > webdisc.train.queries.doct5query-100.chunk${i}.log 2>&1 &
 done
 
+# Doc2Query-Llama2
 for i in 0 1 2 3
 do
 gpu_id=$((i + 4)) 
