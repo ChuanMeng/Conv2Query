@@ -85,7 +85,7 @@ The preprocessing will produce TREC-style queries and qrels stored in `data/webd
 
 ### ProCIS
 Please use the following commands to run [Doc2Query-T5](https://huggingface.co/BeIR/query-gen-msmarco-t5-large-v1) to generate 100 ad-hoc queries per relevant document for each conversational context.
-Alternatively, we provide the script to run [Doc2Query-Llama2](https://huggingface.co/soyuj/llama2-doc2query) to generate 70 queries per relevant document; we set the number of query to 70 because the GPU memory limitation. 
+Alternatively, we provide the script to run [Doc2Query-Llama2](https://huggingface.co/soyuj/llama2-doc2query) to generate 70 queries per relevant document; we set the number of query to 70 because the GPU memory limitation; our preliminary experiments show that Doc2Query-Llama2 does not offer a noticeable improvement over Doc2Query-T5.
 The generated queries will be stored in `data/procis/queries`.
 ```bash
 # Doc2Query-T5
