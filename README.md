@@ -333,7 +333,7 @@ done
 ```
 
 
-### 2.2.3 Query selection
+### 2.2.3 Optimal query selection
 
 #### ProCIS
 
@@ -369,6 +369,106 @@ python query_filter.py \
 
 ## 3. 🚀 Learning to generate ad-hoc queries from conversations
 
+We fine-tune an LLM to learn the mapping raw conversational context to its optimal ad-hoc query target.
+We use DeepSpeed to enable multi-GPU training.
+We define the `his_cur2query` and `his2query` prompts, which are corresponding to the `conversation contextualisation` and `interest anticipation` settings defined in the paper, respectively.
+Specifically, `his_cur2query` aims to generate ad-hoc queries based on conversational history as well as the current user utterance, while `his2query` aims to generate ad-hoc queries based on only conversational history
+
+#### ProCIS
+Run the following commands to fine-tune an LLM to learn the mapping raw conversational context to its optimal ad-hoc query target on ProCIS.
+The checkpoints will be stored in `checkpoint_dir`.
+```bash
+LLM="mistralai/Mistral-7B-Instruct-v0.3"
+LLM_SHORT="${llm##*/}"
+
+# for the conversation contextualisation setting
+nohup \
+deepspeed --include localhost:0,1,2,3 --master_port 60000 conv2query.py \
+--model_name_or_path ${LLM}$ \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--history_dir ./data/procis/queries/procis.train-filtered1000.queries.his.tsv \
+--current_dir ./data/procis/queries/procis.train-filtered1000.queries.cur.tsv \
+--query_dir ./data/procis/queries/procis.train-filtered1000.queries.doct5query-100-q2d_q2c-rankllama512-1-raw.tsv \
+--output_dir ./data/procis/queries/ \
+--checkpoint_dir ./checkpoint/ \
+--logging_steps 10 \
+--batch_size 8 \
+--gradient_accumulation_steps 4 \
+--save_steps 1000 \
+--num_epochs 1.0 \
+--deepspeed_config ./deepspeed/ds_zero1_config.json \
+--prompt his_cur2query \
+> procis.train-filtered1000.queries.his_cur2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
+
+# for the interest anticipation setting
+nohup \
+deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
+--model_name_or_path ${LLM}$ \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--history_dir ./data/procis/queries/procis.train-filtered1000.queries.his.tsv \
+--current_dir ./data/procis/queries/procis.train-filtered1000.queries.cur.tsv \
+--query_dir ./data/procis/queries/procis.train-filtered1000.queries.doct5query-100-q2d_q2c-rankllama512-1-raw.tsv \
+--output_dir ./data/procis/queries/ \
+--checkpoint_dir ./checkpoint/ \
+--logging_steps 10 \
+--batch_size 8 \
+--gradient_accumulation_steps 4 \
+--save_steps 1000 \
+--num_epochs 1.0 \
+--deepspeed_config ./deepspeed/ds_zero1_config.json \
+--prompt his2query \
+> procis.train-filtered1000.queries.his2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
+```
+
+#### WebDisc
+
+Similar operations are performed on WebDisc.
+```bash
+LLM="mistralai/Mistral-7B-Instruct-v0.3"
+LLM_SHORT="${llm##*/}"
+
+# for the conversation contextualisation setting
+nohup \
+deepspeed --include localhost:0,1,2,3 --master_port 60000 conv2query.py \
+--model_name_or_path ${LLM}$ \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--history_dir ./data/webdisc/queries/webdisc.train.queries.his.tsv \
+--current_dir ./data/webdisc/queries/webdisc.train.queries.cur.tsv \
+--query_dir ./data/webdisc/queries/webdisc.train.queries.doct5query-100-q2d_q2c-rankllama512-1-raw.tsv \
+--output_dir ./data/webdisc/queries/ \
+--checkpoint_dir ./checkpoint/ \
+--logging_steps 10 \
+--batch_size 8 \
+--gradient_accumulation_steps 4 \
+--save_steps 1000 \
+--num_epochs 1.0 \
+--deepspeed_config ./deepspeed/ds_zero1_config.json \
+--prompt his_cur2query \
+> webdisc.train.queries.his_cur2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
+
+# for the interest anticipation setting
+nohup \
+deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
+--model_name_or_path ${LLM}$ \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--history_dir ./data/webdisc/queries/webdisc.train.queries.his.tsv \
+--current_dir ./data/webdisc/queries/webdisc.train.queries.cur.tsv \
+--query_dir ./data/webdisc/queries/webdisc.train.queries.doct5query-100-q2d_q2c-rankllama512-1-raw.tsv \
+--output_dir ./data/webdisc/queries/ \
+--checkpoint_dir ./checkpoint/ \
+--logging_steps 10 \
+--batch_size 8 \
+--gradient_accumulation_steps 4 \
+--save_steps 1000 \
+--num_epochs 1.0 \
+--deepspeed_config ./deepspeed/ds_zero1_config.json \
+--prompt his2query \
+> webdisc.train.queries.his2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
+```
 
 ## 4. 🔎 Generating ad-hoc queries for retrieval (inference)
 
