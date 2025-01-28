@@ -474,7 +474,7 @@ deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
 
 ## 4. 🔎 Generating ad-hoc queries for retrieval (inference)
 
-### Generating ad-hoc queries
+### 4.1 Generating ad-hoc queries
 
 #### ProCIS
 
@@ -571,7 +571,7 @@ CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
 done
 ```
 
-### Reuse off-the-shelf ad-hoc retrievers
+### 4.2 Reuse off-the-shelf ad-hoc retrievers
 
 
 ## 5. 🎨 Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (Optional)
