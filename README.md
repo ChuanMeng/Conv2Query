@@ -17,7 +17,9 @@ This repository is structured into the following parts:
 
 ## ⚙️ 1. Prerequisite
 
-## 1.1 Install dependencies
+## 1.1 Installation
+
+Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
@@ -372,11 +374,11 @@ python query_filter.py \
 We fine-tune an LLM to learn the mapping raw conversational context to its optimal ad-hoc query target.
 We use DeepSpeed to enable multi-GPU training.
 We define the `his_cur2query` and `his2query` prompts, which are corresponding to the `conversation contextualisation` and `interest anticipation` settings defined in the paper, respectively.
-Specifically, `his_cur2query` aims to generate ad-hoc queries based on conversational history as well as the current user utterance, while `his2query` aims to generate ad-hoc queries based on only conversational history
+Specifically, `his_cur2query` aims to generate ad-hoc queries based on conversational history as well as the current user utterance, while `his2query` aims to generate ad-hoc queries based on only conversational history.
 
 #### ProCIS
 Run the following commands to fine-tune an LLM to learn the mapping raw conversational context to its optimal ad-hoc query target on ProCIS.
-The checkpoints will be stored in `checkpoint_dir`.
+Use `output_dir` to specify the directory where the checkpoints will be saved.
 ```bash
 LLM="mistralai/Mistral-7B-Instruct-v0.3"
 LLM_SHORT="${llm##*/}"
@@ -471,6 +473,105 @@ deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
 ```
 
 ## 4. 🔎 Generating ad-hoc queries for retrieval (inference)
+
+### Generating ad-hoc queries
+
+#### ProCIS
+
+At test, run the following commands to generate ad-hoc queries for conversational contexts under the two settings on the `dev`, `future_dev`, and `test` sets of ProCIS.
+Use `output_dir` to specify the directory where the generated queries will be saved.
+```bash
+LLM="mistralai/Mistral-7B-Instruct-v0.3"
+LLM_SHORT="${llm##*/}"
+CKPT=procis.train-filtered1000.queries.his_cur2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw
+SETP=4751
+GPU_ID=0
+
+# for the conversation contextualisation setting
+for s in dev future_dev test
+do
+CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
+--model_name_or_path "mistralai/Mistral-7B-Instruct-v0.3" \
+--checkpoint_name ${CKPT}/checkpoint-${SETP} \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--history_dir ./data/procis/queries/procis.${s}.queries.his.tsv \
+--current_dir ./data/procis/queries/procis.${s}.queries.cur.tsv \
+--output_dir ./data/procis/queries/ \
+--checkpoint_dir ./checkpoint/ \
+--batch_size 16  \
+--logging_steps 10 \
+--prompt his_cur2query \
+--infer --verbose
+done
+
+# for the interest anticipation setting
+for s in dev future_dev test
+do
+CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
+--model_name_or_path "mistralai/Mistral-7B-Instruct-v0.3" \
+--checkpoint_name ${CKPT}/checkpoint-${SETP} \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--history_dir ./data/procis/queries/procis.${s}.queries.his.tsv \
+--current_dir ./data/procis/queries/procis.${s}.queries.cur.tsv \
+--output_dir ./data/procis/queries/ \
+--checkpoint_dir ./checkpoint/ \
+--batch_size 16  \
+--logging_steps 10 \
+--prompt his2query \
+--infer --verbose
+done
+```
+
+#### WebDisc
+At test, run the following commands to generate ad-hoc queries for conversational contexts under the two settings on the `val` and `test` sets of WebDisc.
+Use `output_dir` to specify the directory where the generated queries will be saved.
+```bash
+LLM="mistralai/Mistral-7B-Instruct-v0.3"
+LLM_SHORT="${llm##*/}"
+CKPT=webdisc.train.queries.his_cur2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw
+SETP=1003
+GPU_ID=0
+
+# for the conversation contextualisation setting
+for s in dev future_dev test
+do
+CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
+--model_name_or_path "mistralai/Mistral-7B-Instruct-v0.3" \
+--checkpoint_name ${CKPT}/checkpoint-${SETP} \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--history_dir ./data/webdisc/queries/webdisc.${s}.queries.his.tsv \
+--current_dir ./data/webdisc/queries/webdisc.${s}.queries.cur.tsv \
+--output_dir ./data/webdisc/queries/ \
+--checkpoint_dir ./checkpoint/ \
+--batch_size 16  \
+--logging_steps 10 \
+--prompt his_cur2query \
+--infer --verbose
+done
+
+# for the interest anticipation setting
+for s in val test
+do
+CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
+--model_name_or_path "mistralai/Mistral-7B-Instruct-v0.3" \
+--checkpoint_name ${CKPT}/checkpoint-${SETP} \
+--token ${TOKEN} \
+--cache_dir ${CACHE_DIR} \
+--history_dir ./data/webdisc/queries/webdisc.${s}.queries.his.tsv \
+--current_dir ./data/webdisc/queries/webdisc.${s}.queries.cur.tsv \
+--output_dir ./data/webdisc/queries/ \
+--checkpoint_dir ./checkpoint/ \
+--batch_size 16  \
+--logging_steps 10 \
+--prompt his2query \
+--infer --verbose
+done
+```
+
+### Reuse off-the-shelf ad-hoc retrievers
 
 
 ## 5. 🎨 Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (Optional)
