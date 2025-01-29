@@ -3,7 +3,6 @@ import numpy as np
 import json
 import tqdm
 import argparse
-import concurrent.futures
 
 def token_num(text):
     tokens = text.split(" ")
@@ -11,8 +10,8 @@ def token_num(text):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--corpus_dir", type=str, default=None) # ./data/procis/corpus/procis.corpus.jsonl/procis.corpus.jsonl"
-    parser.add_argument("--query_dirs", type=str, nargs='+') # ./data/procis/queries/procis.{s}.queries.{t}.tsv"
+    parser.add_argument("--corpus_dir", type=str, default=None)
+    parser.add_argument("--query_dirs", type=str, nargs='+')
 
     args = parser.parse_args()
 
@@ -34,9 +33,6 @@ if __name__ == '__main__':
     average_token_length_space = np.mean(doc_len_space)
     print(f"Average document token length. llama: {average_token_length_llama:.2f}, space: {average_token_length_space:.2f}")
 
-
-    #for s in ["test","dev","future_dev","train-filtered1000","train"]:
-    #    for t in ["his","his-cur","cur"]:
 
     for query_dir in args.query_dirs:
 
