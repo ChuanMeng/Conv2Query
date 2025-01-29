@@ -3,30 +3,25 @@
 This is the repository for the paper titled **Bridging the Gap: From Ad-hoc to Proactive Search in Conversations**.
 
 This repository is structured into the following parts:
-1. **Prerequisites**
-   - **1.1 Installation**
-   - **1.2 Data preparation**
-
-2. **Producing pseudo ad-hoc query targets for training**
-   - **2.1 Generating ad-hoc queries from documents**
-   - **2.2 Query filtering based on document relevance and conversation alignment (QF-DC)**
-     - **2.2.1 Query–document relevance**
-     - **2.2.2 Query–conversation relevance**
-     - **2.2.3 Optimal query selection**
-
-3. **Learning to generate ad-hoc queries from conversations**
-
-4. **Generating ad-hoc queries for retrieval (inference)**
-
-5. **Reusing off-the-shelf ad-hoc retrievers**
-
-6. **Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional)**
+1. [Prerequisites](#prerequisites)
+   - [Installation](#installation)
+   - [Data preparation](#data-preparation)
+2. [Producing pseudo ad-hoc query targets for training](#producing-pseudo-ad-hoc-query-targets-for-training)
+   - [Generating ad-hoc queries from documents](#generating-ad-hoc-queries-from-documents)
+   - [Query filtering based on document relevance and conversation alignment (QF-DC)](#query-filtering-based-on-document-relevance-and-conversation-alignment-qf-dc)
+     - [Query–document relevance](#query-document-relevance)
+     - [Query–conversation relevance](#query-conversation-relevance)
+     - [Optimal query selection](#optimal-query-selection)
+3. [Learning to generate ad-hoc queries from conversations](#learning-to-generate-ad-hoc-queries-from-conversations)
+4. [Generating ad-hoc queries for retrieval (inference)](#generating-ad-hoc-queries-for-retrieval-inference)
+5. [Reusing off-the-shelf ad-hoc retrievers](#reusing-off-the-shelf-ad-hoc-retrievers)
+6. [Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional)](#further-fine-tuning-ad-hoc-retrievers-using-filtered-ad-hoc-queries-optional)
 
 
 
-## ⚙️ 1. Prerequisites
+## ⚙️ Prerequisites <a name="prerequisites"></a>
 
-## 1.1 Installation
+### Installation <a name="installation"></a>
 
 Install dependencies:
 ```bash
@@ -1070,6 +1065,47 @@ done
 
 
 
+## 6. 🎨 Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (Optional)
+
+
+### 6.1 RepLLaMA fine-tuning
+#### ProCIS
+```bash
+
+
+```
+
+#### WebDisc
+```bash
+
+
+```
+
+### 6.2 RepLLaMA Indexing
+#### ProCIS
+```bash
+
+
+```
+
+#### WebDisc
+```bash
+
+
+```
+
+### 6.3 RepLLaMA retrieval and evaluation
+#### ProCIS
+```bash
+
+
+```
+
+#### WebDisc
+```bash
+
+
+```
 
 
 
