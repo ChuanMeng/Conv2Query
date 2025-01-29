@@ -3,25 +3,24 @@
 This is the repository for the paper titled **Bridging the Gap: From Ad-hoc to Proactive Search in Conversations**.
 
 This repository is structured into the following parts:
-1. [Prerequisites](#prerequisites)
-   - [Installation](#installation)
-   - [Data preparation](#data-preparation)
-2. [Producing pseudo ad-hoc query targets for training](#producing-pseudo-ad-hoc-query-targets-for-training)
-   - [Generating ad-hoc queries from documents](#generating-ad-hoc-queries-from-documents)
-   - [Query filtering based on document relevance and conversation alignment (QF-DC)](#query-filtering-based-on-document-relevance-and-conversation-alignment-qf-dc)
-     - [Query–document relevance](#query-document-relevance)
-     - [Query–conversation relevance](#query-conversation-relevance)
-     - [Optimal query selection](#optimal-query-selection)
-3. [Learning to generate ad-hoc queries from conversations](#learning-to-generate-ad-hoc-queries-from-conversations)
-4. [Generating ad-hoc queries for retrieval (inference)](#generating-ad-hoc-queries-for-retrieval-inference)
-5. [Reusing off-the-shelf ad-hoc retrievers](#reusing-off-the-shelf-ad-hoc-retrievers)
-6. [Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional)](#further-fine-tuning-ad-hoc-retrievers-using-filtered-ad-hoc-queries-optional)
+1. [Prerequisites](#1-prerequisites)
+   - [1.1 Installation](#11-installation)
+   - [1.2 Data preparation](#12-data-preparation)
+2. [Producing pseudo ad-hoc query targets for training](#2-producing-pseudo-ad-hoc-query-targets-for-training)
+   - [2.1 Generating ad-hoc queries from documents](#21-generating-ad-hoc-queries-from-documents)
+   - [2.2 Query filtering based on document relevance and conversation alignment (QF-DC)](#22-query-filtering-based-on-document-relevance-and-conversation-alignment-qf-dc)
+     - [2.2.1 Query–document relevance](#221-query-document-relevance)
+     - [2.2.2 Query–conversation relevance](#222-query-conversation-relevance)
+     - [2.2.3 Optimal query selection](#223-optimal-query-selection)
+3. [Learning to generate ad-hoc queries from conversations](#3-learning-to-generate-ad-hoc-queries-from-conversations)
+4. [Generating ad-hoc queries for retrieval (inference)](#4-generating-ad-hoc-queries-for-retrieval-inference)
+5. [Reusing off-the-shelf ad-hoc retrievers](#5-reusing-off-the-shelf-ad-hoc-retrievers)
+6. [Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional)](#6-further-fine-tuning-ad-hoc-retrievers-using-filtered-ad-hoc-queries-optional)
 
 
+## ⚙️ 1. Prerequisites <a name="1-prerequisites"></a>
 
-## ⚙️ Prerequisites <a name="prerequisites"></a>
-
-### Installation <a name="installation"></a>
+### 1.1 Installation <a name="11-installation"></a>
 
 Install dependencies:
 ```bash
@@ -36,7 +35,7 @@ export CACHE_DIR={your cache path that stores the weights of LLMs}
 ```
 All experiments are conducted on 4 NVIDIA A100 GPUs (40GB).
 
-## 1.2 Data preparation 
+### 1.2 Data preparation <a name="12-data-preparation"></a> 
 
 ### The [ProCIS](https://dl.acm.org/doi/10.1145/3626772.3657869) dataset (published at SIGIR 2024)
 Please download the raw data and then put the raw data in the directory of `./data/procis/raw`:
@@ -85,9 +84,9 @@ python -u ./preprocess_webdisc.py
 The preprocessing will produce TREC-style queries and qrels stored in `data/webdisc/queries` and `data/webdisc/qrels`, respectively. And it will produce Pyserini-style and Tevatron-style corpus files stored in `data/webdisc/corpus`.
 
 
-## 📜 2. Producing pseudo ad-hoc query targets for training
+## 📜 2. Producing pseudo ad-hoc query targets for training <a name="2-producing-pseudo-ad-hoc-query-targets-for-training"></a>
 
-## 2.1 Generating ad-hoc queries from documents
+### 2.1 Generating ad-hoc queries from documents <a name="21-generating-ad-hoc-queries-from-documents"></a>
 
 ### ProCIS
 Please use the following commands to run [Doc2Query-T5](https://huggingface.co/BeIR/query-gen-msmarco-t5-large-v1) to generate 100 ad-hoc queries per relevant document for each conversational context.
@@ -171,10 +170,10 @@ nohup python -u docllamaquery.py \
 done
 ```
 
-## 2.2. 🔬 Query filtering based on document relevance and conversation alignment (QF-DC)
+### 2.2 Query filtering based on document relevance and conversation alignment (QF-DC) <a name="22-query-filtering-based-on-document-relevance-and-conversation-alignment-qf-dc"></a>
 For predicting query--document relevance and query--conversation relevance, we use [RepLLaMA](https://huggingface.co/castorini/repllama-v1-7b-lora-passage) as our relevance model. We use the Tevatron package.
 
-### 2.2.1 Query--document relevance
+#### 2.2.1 Query–document relevance <a name="221-query-document-relevance"></a>
 
 #### ProCIS
 
@@ -256,7 +255,7 @@ nohup python -m tevatron.reranker.driver.rerank \
 done
 ```
 
-### 2.2.2 Query--conversation relevance
+#### 2.2.2 Query–conversation relevance <a name="222-query-conversation-relevance"></a>
 
 #### ProCIS
 
@@ -339,7 +338,7 @@ done
 ```
 
 
-### 2.2.3 Optimal query selection
+#### 2.2.3 Optimal query selection <a name="223-optimal-query-selection"></a>
 
 #### ProCIS
 
@@ -373,7 +372,7 @@ python query_filter.py \
 --num_chunks 4 --mode ${mode}
 ```
 
-## 3. 🚀 Learning to generate ad-hoc queries from conversations
+## 🚀 3. Learning to generate ad-hoc queries from conversations <a name="3-learning-to-generate-ad-hoc-queries-from-conversations"></a>
 
 We fine-tune an LLM to learn the mapping raw conversational context to its optimal ad-hoc query target.
 We use DeepSpeed to enable multi-GPU training.
@@ -476,9 +475,7 @@ deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
 > webdisc.train.queries.his2query--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
 ```
 
-## 4. 🔎 Generating ad-hoc queries for retrieval (inference)
-
-### 4.1 Generating ad-hoc queries
+## 🔎 4. Generating ad-hoc queries for retrieval (inference) <a name="4-generating-ad-hoc-queries-for-retrieval-inference"></a>
 
 #### ProCIS
 
@@ -595,7 +592,7 @@ CUDA_VISIBLE_DEVICES=${gpuid} python conv2query.py \
 done
 ```
 
-## 5. Reusing off-the-shelf ad-hoc retrievers
+## 5. Reusing off-the-shelf ad-hoc retrievers <a name="5-reusing-off-the-shelf-ad-hoc-retrievers"></a>
 
 We use BM25, ANCE, SPLADE++ and RepLLaMA as off-the-shelf retrievers.
 We use BM25 and ANCE from [Pyserini](https://github.com/castorini/pyserini); we use SPLADE++ from the official repository of [SPLADE](https://github.com/naver/splade); and we use RepLLaMA from [Tevatron](https://github.com/texttron/tevatron).
@@ -1065,7 +1062,7 @@ done
 
 
 
-## 6. 🎨 Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (Optional)
+## 🎨 6. Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional) <a name="6-further-fine-tuning-ad-hoc-retrievers-using-filtered-ad-hoc-queries-optional"></a>
 
 
 ### 6.1 RepLLaMA fine-tuning
