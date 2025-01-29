@@ -19,7 +19,7 @@ PROMPTER = {
         "spliter": "Generated query:"
     },
     "his_cur2query": {
-        "template": "Instruction: Based on the following conversation history and the user current utterance, please generate a search query that retrieves documents relevant to the user current utterance.\nConversational history: {history}\nUser current utterance: {current}\nGenerated query:",
+        "template": "Instruction: Based on the following conversation history and the user current utterance, please generate a search query that retrieves documents relevant to the user current utterance.\nConversational history: {history}\nCurrent user utterance: {current}\nGenerated query:",
         "spliter": "Generated query:"
     }
 }
@@ -27,7 +27,7 @@ PROMPTER = {
 """
 We define two prompts:
  "his2query" aims to generate ad-hoc queries based on only conversational history
-"his_cur2query" aims to generate ad-hoc queries based on conversational history as well as the user curren utterance
+"his_cur2query" aims to generate ad-hoc queries based on conversational history as well as the current user utterance
 
 Note that "spliter" is used for text sparser to extract generated content we want
 """
@@ -240,7 +240,10 @@ def train(args):
     )
     model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
 
+    model.save_pretrained(f"{args.checkpoint_path}/checkpoint-0")
+
     trainer.train()
+
     model.save_pretrained(args.checkpoint_path)
 
 
@@ -374,11 +377,10 @@ if __name__ == '__main__':
     # parse basic information from input path
     args.dataset_class = args.history_dir.split("/")[-1].split(".")[0]
     args.dataset_name = args.history_dir.split("/")[-1].split(".")[1]
-    args.history_type = args.history_dir.split("/")[-1].split(".")[3]
     args.base_model = args.model_name_or_path.split("/")[-1]
 
     if args.verbose:
-        print(f"dataset_class: {args.dataset_class}\ndataset_name: {args.dataset_name}\nhistory_type: {args.history_type}\nbase_model: {args.base_model}\n")
+        print(f"dataset_class: {args.dataset_class}\ndataset_name: {args.dataset_name}\nprompt_type: {args.prompt}\nbase_model: {args.base_model}\n")
 
     # make sure replicability
     replicability(seed=args.random_seed)
@@ -390,10 +392,10 @@ if __name__ == '__main__':
             args.checkpoint_path = f"{args.checkpoint_dir}/{args.checkpoint_name}/" # a specific checkpoint file name
             if "/" in args.checkpoint_name:
                 args.checkpoint_name = args.checkpoint_name.replace("/", "-")
-            args.setup = f"{args.dataset_class}.{args.dataset_name}.q.{args.prompt}--{args.base_model}--ckpt-{args.checkpoint_name}"
+            args.setup = f"{args.dataset_class}.{args.dataset_name}.queries.{args.prompt}--{args.base_model}--ckpt-{args.checkpoint_name}"
         else:
             # when we do infernece based on an original model
-            args.setup = f"{args.dataset_class}.{args.dataset_name}.q.{args.prompt}--{args.base_model}"
+            args.setup = f"{args.dataset_class}.{args.dataset_name}.queries.{args.prompt}--{args.base_model}"
 
         # define where output files will be generated
         if not os.path.exists(args.output_dir):
@@ -408,7 +410,7 @@ if __name__ == '__main__':
         # extract learning target name
         args.output_type = args.query_dir.split("/")[-1].split(".")[3]
         # define checkpoint name
-        args.setup = f"{args.dataset_class}.{args.dataset_name}.q.{args.prompt}--{args.base_model}--{args.output_type}"
+        args.setup = f"{args.dataset_class}.{args.dataset_name}.queries.{args.prompt}--{args.base_model}--{args.output_type}"
         # define where checkpoint will be saved
         args.checkpoint_path = f"{args.checkpoint_dir}/{args.setup}/"
 
