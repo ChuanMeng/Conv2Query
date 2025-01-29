@@ -12,7 +12,7 @@ This repository is structured into the following parts:
      - [2.2.1 Query–document relevance](#221-query-document-relevance)
      - [2.2.2 Query–conversation relevance](#222-query-conversation-relevance)
      - [2.2.3 Optimal query selection](#223-optimal-query-selection)
-3. [Learning to generate ad-hoc queries from conversations](#3-learning-to-generate-ad-hoc-queries-from-conversations)
+3. [Learning to generate ad-hoc queries from conversations (training)](#3-learning-to-generate-ad-hoc-queries-from-conversations-training)
 4. [Generating ad-hoc queries for retrieval (inference)](#4-generating-ad-hoc-queries-for-retrieval-inference)
 5. [Reusing off-the-shelf ad-hoc retrievers](#5-reusing-off-the-shelf-ad-hoc-retrievers-training)
 6. [Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional)](#6-further-fine-tuning-ad-hoc-retrievers-using-filtered-ad-hoc-queries-optional)
@@ -171,7 +171,7 @@ done
 ```
 
 ### 2.2 Query filtering based on document relevance and conversation alignment (QF-DC) <a name="22-query-filtering-based-on-document-relevance-and-conversation-alignment-qf-dc"></a>
-For predicting query--document relevance and query--conversation relevance, we use [RepLLaMA](https://huggingface.co/castorini/repllama-v1-7b-lora-passage) as our relevance model. We use the Tevatron package.
+For predicting query--document relevance and query--conversation relevance, we use [RankLLaMA](https://huggingface.co/castorini/rankllama-v1-7b-lora-passage) as our relevance model. We use the Tevatron package.
 
 #### 2.2.1 Query–document relevance <a name="221-query-document-relevance"></a>
 
