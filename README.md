@@ -3,19 +3,28 @@
 This is the repository for the paper titled **Bridging the Gap: From Ad-hoc to Proactive Search in Conversations**.
 
 This repository is structured into the following parts:
-1. Prerequisite
-   * 1.1 Install dependencies
-   * 1.2 Data preparation
-2. Producing pseudo ad-hoc query targets for training
-   * 2.1 Generating ad-hoc queries from documents
-   * 2.2 Query filtering based on document relevance and conversation alignment (QF-DC)
-3. Learning to generate ad-hoc queries from conversations
-4. Generating ad-hoc queries for retrieval (inference)
-5. Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional)
+1. **Prerequisites**
+   - **1.1 Installation**
+   - **1.2 Data preparation**
+
+2. **Producing pseudo ad-hoc query targets for training**
+   - **2.1 Generating ad-hoc queries from documents**
+   - **2.2 Query filtering based on document relevance and conversation alignment (QF-DC)**
+     - **2.2.1 Query–document relevance**
+     - **2.2.2 Query–conversation relevance**
+     - **2.2.3 Optimal query selection**
+
+3. **Learning to generate ad-hoc queries from conversations**
+
+4. **Generating ad-hoc queries for retrieval (inference)**
+
+5. **Reusing off-the-shelf ad-hoc retrievers**
+
+6. **Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional)**
 
 
 
-## ⚙️ 1. Prerequisite
+## ⚙️ 1. Prerequisites
 
 ## 1.1 Installation
 
@@ -93,8 +102,8 @@ The generated queries will be stored in `data/procis/queries`.
 # Doc2Query-T5
 for i in 0 1 2 3
 do
-gpu_id=$((i)) 
-CUDA_VISIBLE_DEVICES=${gpu_id} \
+gpuid=$((i)) 
+CUDA_VISIBLE_DEVICES=${gpuid} \
 nohup python -u doct5query.py \
 --corpus_dir ./data/procis/corpus/procis.corpus.jsonl/procis.corpus.jsonl \
 --qrels_dir ./data/procis/qrels/procis.train-filtered1000.qrels.turn-link.txt \
@@ -110,8 +119,8 @@ done
 # Doc2Query-Llama2
 for i in 0 1 2 3
 do
-gpu_id=$((i)) 
-CUDA_VISIBLE_DEVICES=${gpu_id} \
+gpuid=$((i)) 
+CUDA_VISIBLE_DEVICES=${gpuid} \
 nohup python -u docllamaquery.py \
 --token ${TOKEN} \
 --cache_dir ${CACHE_DIR} \
@@ -133,8 +142,8 @@ The following operations are similar to ProCIS. The generated queries will be st
 # Doc2Query-T5
 for i in 0 1 2 3
 do
-gpu_id=$((i)) 
-CUDA_VISIBLE_DEVICES=${gpu_id} \
+gpuid=$((i)) 
+CUDA_VISIBLE_DEVICES=${gpuid} \
 nohup python -u doct5query.py \
 --corpus_dir ./data/webdisc/corpus/webdisc.corpus.jsonl/webdisc.corpus.jsonl \
 --qrels_dir ./data/webdisc/qrels/webdisc.train.qrels.txt \
@@ -150,8 +159,8 @@ done
 # Doc2Query-Llama2
 for i in 0 1 2 3
 do
-gpu_id=$((i)) 
-CUDA_VISIBLE_DEVICES=${gpu_id} \
+gpuid=$((i)) 
+CUDA_VISIBLE_DEVICES=${gpuid} \
 nohup python -u docllamaquery.py \
 --token ${TOKEN} \
 --cache_dir ${CACHE_DIR} \
@@ -194,8 +203,8 @@ done
 # run relevance prediction
 for i in 0 1 2 3
 do
-gpu_id=$((i)) 
-CUDA_VISIBLE_DEVICES=${gpu_id} \
+gpuid=$((i)) 
+CUDA_VISIBLE_DEVICES=${gpuid} \
 nohup python -m tevatron.reranker.driver.rerank \
   --output_dir=temp \
   --model_name_or_path castorini/rankllama-v1-7b-lora-passage \
@@ -234,8 +243,8 @@ done
 # run relevance prediction
 for i in 0 1 2 3
 do
-gpu_id=$((i)) 
-CUDA_VISIBLE_DEVICES=${gpu_id} \
+gpuid=$((i)) 
+CUDA_VISIBLE_DEVICES=${gpuid} \
 nohup python -m tevatron.reranker.driver.rerank \
   --output_dir=temp \
   --model_name_or_path castorini/rankllama-v1-7b-lora-passage \
@@ -276,8 +285,8 @@ done
 # run relevance prediction
 for i in 0 1 2 3
 do
-gpu_id=$((i)) 
-CUDA_VISIBLE_DEVICES=${gpu_id} \
+gpuid=$((i)) 
+CUDA_VISIBLE_DEVICES=${gpuid} \
 nohup python -m tevatron.reranker.driver.rerank \
   --output_dir=temp \
   --model_name_or_path castorini/rankllama-v1-7b-lora-passage \
@@ -316,8 +325,8 @@ done
 # run relevance prediction
 for i in 0 1 2 3
 do
-gpu_id=$((i)) 
-CUDA_VISIBLE_DEVICES=${gpu_id} \
+gpuid=$((i)) 
+CUDA_VISIBLE_DEVICES=${gpuid} \
 nohup python -m tevatron.reranker.driver.rerank \
   --output_dir=temp \
   --model_name_or_path castorini/rankllama-v1-7b-lora-passage \
@@ -380,13 +389,13 @@ Specifically, `his_cur2query` aims to generate ad-hoc queries based on conversat
 Run the following commands to fine-tune an LLM to learn the mapping raw conversational context to its optimal ad-hoc query target on ProCIS.
 Use `output_dir` to specify the directory where the checkpoints will be saved.
 ```bash
-LLM="mistralai/Mistral-7B-Instruct-v0.3"
-LLM_SHORT="${llm##*/}"
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
 
 # for the conversation contextualisation setting
 nohup \
 deepspeed --include localhost:0,1,2,3 --master_port 60000 conv2query.py \
---model_name_or_path ${LLM}$ \
+--model_name_or_path ${llm}$ \
 --token ${TOKEN} \
 --cache_dir ${CACHE_DIR} \
 --history_dir ./data/procis/queries/procis.train-filtered1000.queries.his.tsv \
@@ -401,12 +410,12 @@ deepspeed --include localhost:0,1,2,3 --master_port 60000 conv2query.py \
 --num_epochs 1.0 \
 --deepspeed_config ./deepspeed/ds_zero1_config.json \
 --prompt his_cur2query \
-> procis.train-filtered1000.queries.his_cur2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
+> procis.train-filtered1000.queries.his_cur2query--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
 
 # for the interest anticipation setting
 nohup \
 deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
---model_name_or_path ${LLM}$ \
+--model_name_or_path ${llm}$ \
 --token ${TOKEN} \
 --cache_dir ${CACHE_DIR} \
 --history_dir ./data/procis/queries/procis.train-filtered1000.queries.his.tsv \
@@ -421,15 +430,15 @@ deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
 --num_epochs 1.0 \
 --deepspeed_config ./deepspeed/ds_zero1_config.json \
 --prompt his2query \
-> procis.train-filtered1000.queries.his2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
+> procis.train-filtered1000.queries.his2query--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
 ```
 
 #### WebDisc
 
 Similar operations are performed on WebDisc.
 ```bash
-LLM="mistralai/Mistral-7B-Instruct-v0.3"
-LLM_SHORT="${llm##*/}"
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
 
 # for the conversation contextualisation setting
 nohup \
@@ -449,12 +458,12 @@ deepspeed --include localhost:0,1,2,3 --master_port 60000 conv2query.py \
 --num_epochs 1.0 \
 --deepspeed_config ./deepspeed/ds_zero1_config.json \
 --prompt his_cur2query \
-> webdisc.train.queries.his_cur2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
+> webdisc.train.queries.his_cur2query--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
 
 # for the interest anticipation setting
 nohup \
 deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
---model_name_or_path ${LLM}$ \
+--model_name_or_path ${llm}$ \
 --token ${TOKEN} \
 --cache_dir ${CACHE_DIR} \
 --history_dir ./data/webdisc/queries/webdisc.train.queries.his.tsv \
@@ -469,7 +478,7 @@ deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
 --num_epochs 1.0 \
 --deepspeed_config ./deepspeed/ds_zero1_config.json \
 --prompt his2query \
-> webdisc.train.queries.his2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
+> webdisc.train.queries.his2query--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw.log 2>&1 &
 ```
 
 ## 4. 🔎 Generating ad-hoc queries for retrieval (inference)
@@ -481,18 +490,22 @@ deepspeed --include localhost:0,1,2,3 --master_port 60001 conv2query.py \
 At test, run the following commands to generate ad-hoc queries for conversational contexts under the two settings on the `dev`, `future_dev`, and `test` sets of ProCIS.
 Use `output_dir` to specify the directory where the generated queries will be saved.
 ```bash
-LLM="mistralai/Mistral-7B-Instruct-v0.3"
-LLM_SHORT="${llm##*/}"
-CKPT=procis.train-filtered1000.queries.his_cur2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw
-SETP=4751
-GPU_ID=0
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+prompt=his_cur2query
+ckpt=procis.train-filtered1000.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=4751
+gpuid=0
+
 
 # for the conversation contextualisation setting
+for p in his_cur2query his2query
+do
 for s in dev future_dev test
 do
-CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
---model_name_or_path "mistralai/Mistral-7B-Instruct-v0.3" \
---checkpoint_name ${CKPT}/checkpoint-${SETP} \
+CUDA_VISIBLE_DEVICES=${gpuid} python conv2query.py \
+--model_name_or_path ${llm} \
+--checkpoint_name ${ckpt}/checkpoint-${step} \
 --token ${TOKEN} \
 --cache_dir ${CACHE_DIR} \
 --history_dir ./data/procis/queries/procis.${s}.queries.his.tsv \
@@ -501,16 +514,24 @@ CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
 --checkpoint_dir ./checkpoint/ \
 --batch_size 16  \
 --logging_steps 10 \
---prompt his_cur2query \
+--prompt ${prompt} \
 --infer --verbose
 done
+done
+
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+prompt=his2query
+ckpt=procis.train-filtered1000.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=4751
+gpuid=0
 
 # for the interest anticipation setting
 for s in dev future_dev test
 do
-CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
---model_name_or_path "mistralai/Mistral-7B-Instruct-v0.3" \
---checkpoint_name ${CKPT}/checkpoint-${SETP} \
+CUDA_VISIBLE_DEVICES=${gpuid} python conv2query.py \
+--model_name_or_path ${llm} \
+--checkpoint_name ${ckpt}/checkpoint-${step} \
 --token ${TOKEN} \
 --cache_dir ${CACHE_DIR} \
 --history_dir ./data/procis/queries/procis.${s}.queries.his.tsv \
@@ -519,7 +540,7 @@ CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
 --checkpoint_dir ./checkpoint/ \
 --batch_size 16  \
 --logging_steps 10 \
---prompt his2query \
+--prompt ${prompt} \
 --infer --verbose
 done
 ```
@@ -528,18 +549,19 @@ done
 At test, run the following commands to generate ad-hoc queries for conversational contexts under the two settings on the `val` and `test` sets of WebDisc.
 Use `output_dir` to specify the directory where the generated queries will be saved.
 ```bash
-LLM="mistralai/Mistral-7B-Instruct-v0.3"
-LLM_SHORT="${llm##*/}"
-CKPT=webdisc.train.queries.his_cur2query--${LLM_SHORT}--doct5query-100-q2d_q2c-rankllama512-1-raw
-SETP=1003
-GPU_ID=0
-
 # for the conversation contextualisation setting
+prompt=his_cur2query
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+ckpt=webdisc.train.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=1003
+gpuid=0
+
 for s in dev future_dev test
 do
-CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
---model_name_or_path "mistralai/Mistral-7B-Instruct-v0.3" \
---checkpoint_name ${CKPT}/checkpoint-${SETP} \
+CUDA_VISIBLE_DEVICES=${gpuid} python conv2query.py \
+--model_name_or_path ${llm} \
+--checkpoint_name ${ckpt}/checkpoint-${step} \
 --token ${TOKEN} \
 --cache_dir ${CACHE_DIR} \
 --history_dir ./data/webdisc/queries/webdisc.${s}.queries.his.tsv \
@@ -548,16 +570,23 @@ CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
 --checkpoint_dir ./checkpoint/ \
 --batch_size 16  \
 --logging_steps 10 \
---prompt his_cur2query \
+--prompt ${prompt} \
 --infer --verbose
 done
 
 # for the interest anticipation setting
+prompt=his2query
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+ckpt=webdisc.train.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=1003
+gpuid=0
+
 for s in val test
 do
-CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
---model_name_or_path "mistralai/Mistral-7B-Instruct-v0.3" \
---checkpoint_name ${CKPT}/checkpoint-${SETP} \
+CUDA_VISIBLE_DEVICES=${gpuid} python conv2query.py \
+--model_name_or_path ${llm} \
+--checkpoint_name ${ckpt}/checkpoint-${step} \
 --token ${TOKEN} \
 --cache_dir ${CACHE_DIR} \
 --history_dir ./data/webdisc/queries/webdisc.${s}.queries.his.tsv \
@@ -566,15 +595,479 @@ CUDA_VISIBLE_DEVICES=${GPU_ID} python conv2query.py \
 --checkpoint_dir ./checkpoint/ \
 --batch_size 16  \
 --logging_steps 10 \
---prompt his2query \
+--prompt ${prompt} \
 --infer --verbose
 done
 ```
 
-### 4.2 Reuse off-the-shelf ad-hoc retrievers
+## 5. Reusing off-the-shelf ad-hoc retrievers
+
+We use BM25, ANCE, SPLADE++ and RepLLaMA as off-the-shelf retrievers.
+We use BM25 and ANCE from [Pyserini](https://github.com/castorini/pyserini); we use SPLADE++ from the official repository of [SPLADE](https://github.com/naver/splade); and we use RepLLaMA from [Tevatron](https://github.com/texttron/tevatron).
+Note that ANCE, SPLADE++ and RepLLaMA have been pre-trained on the training set of MS MARCO V1 (passage retrieval).
+
+In the following part, we show an example of reusing BM25, ANCE via [Pyserini](https://github.com/castorini/pyserini), as well as RepLLaMA via [Tevatron](https://github.com/texttron/tevatron) under the `conversation contextualisation` and `interest anticipation` settings.
+Please follow the instruction in [SPLADE](https://github.com/naver/splade) to reuse SPLADE++.
 
 
-## 5. 🎨 Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (Optional)
+### 5.1 BM25/ANCE indexing
+
+#### ProCIS
+
+Run the following commands to index the ProCIS corpus for BM25 and ANCE retrieval:
+```bash
+# bm25
+python -m pyserini.index.lucene \
+--collection JsonCollection \
+--input ./data/procis/corpus/procis.corpus.jsonl \
+--index ./data/procis/indexs/procis.index.bm25 \
+--generator DefaultLuceneDocumentGenerator \
+--threads 16 \
+--storePositions --storeDocvectors --storeRaw
+
+# ance
+nohup \
+python -m pyserini.encode \
+  input   --corpus ./data/procis/corpus/procis.corpus.jsonl \
+          --fields text \
+          --delimiter "\n" \
+          --shard-id 0 \
+          --shard-num 1 \
+  output  --embeddings ./data/procis/indexes/procis.index.ance-msmarco-passage \
+          --to-faiss \
+  encoder --encoder castorini/ance-msmarco-passage \
+          --fields text \
+          --device cuda:0 \
+          --batch 256 \
+          --max-length 256 \
+          > procis.index.ance-msmarco-passage.log 2>&1 &
+
+```
+
+#### WebDisc
+
+Run the following commands to index the WebDisc corpus for BM25 and ANCE retrieval:
+```bash
+python -m pyserini.index.lucene \
+--collection JsonCollection \
+--input ./data/webdisc/corpus/webdisc.corpus.jsonl \
+--index ./data/webdisc/indexes/webdisc.index.bm25 \
+--generator DefaultLuceneDocumentGenerator \
+--threads 16 \
+--storePositions --storeDocvectors --storeRaw
+
+nohup \
+python -m pyserini.encode \
+  input   --corpus ./data/webdisc/corpus/webdisc.corpus.jsonl \
+          --fields text \
+          --delimiter "\n" \
+          --shard-id 0 \
+          --shard-num 1 \
+  output  --embeddings ./data/webdisc/indexes/webdisc.index.ance-msmarco-passage \
+          --to-faiss \
+  encoder --encoder castorini/ance-msmarco-passage \
+          --fields text \
+          --device cuda:0 \
+          --batch 128 \
+          --max-length 512 \
+          > webdisc.index.ance-msmarco-passage.log 2>&1 &
+
+```
+
+### 5.2 RepLLaMA indexing
+
+Run the following commands to index the ProCIS corpus for RepLLaMA retrieval:
+#### ProCIS
+```bash
+q_len=64
+psg_len=256
+mkdir ./data/webdisc/indexes/procis.index.psg${psg_len}--repllama-v1-7b-lora-passage
+
+for s in 0 1 2 3
+do
+gpuid=${s} \
+CUDA_VISIBLE_DEVICES=${s} \
+nohup \
+python -m tevatron.retriever.driver.encode \
+  --output_dir=./temp \
+  --model_name_or_path meta-llama/Llama-2-7b-hf \
+  --lora_name_or_path castorini/repllama-v1-7b-lora-passage \
+  --lora \
+  --query_prefix "query:" \
+  --passage_prefix "passage:" \
+  --bf16 \
+  --pooling eos \
+  --append_eos_token \
+  --normalize \
+  --per_device_eval_batch_size 64 \
+  --query_max_len ${q_len} \
+  --passage_max_len ${psg_len} \
+  --dataset_path ./data/procis/corpus/procis.corpus-tevatron.jsonl \
+  --dataset_config jsonl \
+  --dataset_number_of_shards 4 \
+  --dataset_shard_index ${s} \
+  --encode_output_path ./data/procis/indexes/procis.index.psg256--repllama-v1-7b-lora-passage/${s}.pkl \
+  > procis.index.psg256--repllama-v1-7b-lora-passage.${s}.log 2>&1 &
+done
+
+```
+
+#### WebDisc
+similarly, run the following commands to index the WebDisc corpus for RepLLaMA retrieval:
+```bash
+q_len=64
+psg_len=512
+mkdir ./data/webdisc/indexes/webdisc.index.psg${psg_len}--repllama-v1-7b-lora-passage
+
+
+for i in 0 1 2 3
+do
+CUDA_VISIBLE_DEVICES=$((i)) \
+nohup \
+python -m tevatron.retriever.driver.encode \
+  --output_dir=./temp \
+  --model_name_or_path meta-llama/Llama-2-7b-hf \
+  --lora_name_or_path castorini/repllama-v1-7b-lora-passage \
+  --lora \
+  --query_prefix "query:" \
+  --passage_prefix "passage:" \
+  --bf16 \
+  --pooling eos \
+  --append_eos_token \
+  --normalize \
+  --per_device_eval_batch_size 32 \
+  --query_max_len ${q_len} \
+  --passage_max_len ${psg_len} \
+  --dataset_path ./data/webdisc/corpus/webdisc.corpus-tevatron.jsonl \
+  --dataset_config jsonl \
+  --dataset_number_of_shards 4 \
+  --dataset_shard_index ${i} \
+  --encode_output_path ./data/webdisc/indexes/webdisc.index.psg512--repllama-v1-7b-lora-passage/${i}.pkl \
+  > webdisc.index.psg512--repllama-v1-7b-lora-passage.${i}.log 2>&1 &
+done 
+
+```
+
+### 5.3 BM25/ANCE retrieval and evaluation
+#### ProCIS
+
+Run the following commands to perform BM25/ANCE retrieval on the dev, future dev and test sets of ProCIS under the two settings:
+```bash
+
+# bm25
+for prompt in his_cur2query his2query
+do
+
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+ckpt=procis.train-filtered1000.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=4751
+q=${prompt}--${llm_short}--ckpt-${ckpt}-step-${step}
+k1=0.9
+b=0.4
+
+for s in dev future_dev test
+do
+python -m pyserini.search.lucene \
+ --topics ./data/procis/queries/procis.${s}.queries.${q}.tsv \
+ --index ./data/procis/indexes/procis.index.bm25 \
+ --output ./data/procis/runs/procis.${s}.run.${q}--bm25-k1-${k1}-b-${b}.txt \
+ --bm25 --hits 1000 --batch-size 512 --k1 ${k1} --b ${b}
+
+
+# evaluation
+    if [ "$s" = "test" ]; then
+      qrels_file="./data/procis/qrels/procis.${s}.qrels.turn-manual.txt"
+    else
+      qrels_file="./data/procis/qrels/procis.${s}.qrels.turn-link.txt"
+    fi
+
+echo ${s} ${q} bm25-k1-${k1}-b-${b}  
+python -u evaluate_ranking.py \
+--run_dir ./data/procis/runs/procis.${s}.run.${q}--bm25-k1-${k1}-b-${b}.txt \
+--qrels_dir ${qrels_file} \
+--rel_scale 1
+
+done
+done
+
+
+# ance
+gpuid=0
+
+for prompt in his_cur2query his2query
+do
+
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+ckpt=procis.train-filtered1000.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=4751
+q=${prompt}--${llm_short}--ckpt-${ckpt}-step-${step}
+
+for s in dev future_dev test
+do
+python -m pyserini.search.faiss \
+ --threads 16 --batch-size 512 --hits 1000 --device cuda:${gpuid} \
+ --index ./data/procis/indexes/procis.index.ance-msmarco-passage \
+ --topics ./data/procis/queries/procis.${s}.queries.${q}.tsv \
+ --encoder castorini/ance-msmarco-passage \
+ --output ./data/procis/runs/procis.${s}.run.${q}--ance-msmarco-passage.txt
+
+
+# evaluation
+    if [ "$s" = "test" ]; then
+      qrels_file="./data/procis/qrels/procis.${s}.qrels.turn-manual.txt"
+    else
+      qrels_file="./data/procis/qrels/procis.${s}.qrels.turn-link.txt"
+    fi
+
+echo ${s} ${q} ance-msmarco-passage 
+python -u evaluate_ranking.py \
+--run_dir ./data/procis/runs/procis.${s}.run.${q}--ance-msmarco-passage.txt \
+--qrels_dir ${qrels_file} \
+--rel_scale 1
+
+done
+done
+
+```
+
+#### WebDisc
+
+Run the following commands to perform BM25/ANCE retrieval on the test and val sets of WebDisc under the two settings:
+```bash
+# bm25
+for prompt in his_cur2query his2query
+do
+
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+ckpt=webdisc.train.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=1003
+q=${prompt}--${llm_short}--ckpt-${ckpt}-step-${step}
+k1=4
+b=0.9
+
+for s in val test
+do
+python -m pyserini.search.lucene \
+ --stopwords ./data/webdisc/raw/stopwords.txt \ # follow the original authors to consider stop words.
+ --topics ./data/webdisc/queries/webdisc.${s}.queries.${q}.tsv \
+ --index ./data/webdisc/indexes/webdisc.index.bm25 \
+ --output ./data/webdisc/runs/webdisc.${s}.run.${q}--bm25-k1-${k1}-b-${b}_remove_stopwords.txt \
+ --bm25 --hits 1000 --batch-size 512 --k1 ${k1} --b ${b}
+
+
+# evaluation
+echo ${s} ${q} bm25-k1-${k1}-b-${b}_remove_stopwords
+python -u evaluate_ranking.py \
+--run_dir ./data/webdisc/runs/webdisc.${s}.run.${q}--bm25-k1-${k1}-b-${b}_remove_stopwords.txt \
+--qrels_dir ./data/webdisc/qrels/webdisc.${s}.qrels.txt \
+--rel_scale 1
+
+done
+done
+
+
+# ance
+gpuid=0 
+
+for prompt in his_cur2query his2query
+do
+
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+ckpt=webdisc.train.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=1003
+q=${prompt}--${llm_short}--ckpt-${ckpt}-step-${step}
+
+for s in val test 
+do
+python -m pyserini.search.faiss \
+ --threads 16 --batch-size 512 --hits 1000 --max-length 512 --device cuda:${gpuid} \
+ --index ./data/webdisc/indexes/webdisc.index.ance-msmarco-passage \
+ --topics ./data/webdisc/queries/webdisc.${s}.q.${q}-checkpoint-${ckpt}.tsv \
+ --encoder castorini/ance-msmarco-passage \
+ --output ./data/webdisc/runs/webdisc.${s}.run.${q}-checkpoint-${ckpt}--ance-msmarco-passage.txt
+
+# evaluation
+echo ${s} ${q} ance-msmarco-passage
+python -u evaluate_ranking.py \
+--run_dir ./data/webdisc/runs/webdisc.${s}.run.${q}--ance-msmarco-passage.txt \
+--qrels_dir ./data/webdisc/qrels/webdisc.${s}.qrels.txt \
+--rel_scale 1
+done
+done
+
+```
+
+### 5.4 RepLLaMA retrieval and evaluation
+#### ProCIS
+```bash
+
+gpuid=0
+
+for prompt in his_cur2query his2query
+do
+
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+ckpt=procis.train-filtered1000.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=4751
+q=${prompt}--${llm_short}--ckpt-${ckpt}-step-${step}
+
+
+for s in dev future_dev test
+do
+
+q_len=64
+psg_len=256
+run=procis.${s}.run.${q}-${q_len}-psg${psg_len}--repllama-v1-7b-lora-passage.gpu
+mkdir ./data/procis/runs/${run}_
+
+# query encoding
+CUDA_VISIBLE_DEVICES=${gpuid} \
+python -m tevatron.retriever.driver.encode \
+  --output_dir=./temp \
+  --model_name_or_path meta-llama/Llama-2-7b-hf \
+  --lora_name_or_path castorini/repllama-v1-7b-lora-passage \
+  --lora \
+  --query_prefix "query:" \
+  --passage_prefix "passage:" \
+  --bf16 \
+  --pooling eos \
+  --append_eos_token \
+  --normalize \
+  --encode_is_query \
+  --per_device_eval_batch_size 128 \
+  --query_max_len ${q_len} \
+  --passage_max_len ${psg_len} \
+  --dataset_path ./data/procis/queries/procis.${s}.queries.${q}.jsonl \
+  --dataset_config jsonl \
+  --encode_output_path ./data/procis/queries/procis.${s}.queries.${q}-${q_len}--repllama-v1-7b-lora-passage.pkl
+
+# search
+for shard in 0 1 2 3
+do
+CUDA_VISIBLE_DEVICES=${gpuid} \
+python -m tevatron.retriever.driver.search \
+    --query_reps ./data/procis/queries/procis.${s}.queries.${q}-${q_len}--repllama-v1-7b-lora-passage.pkl \
+    --passage_reps ./data/procis/indexes/procis.index.psg${psg_len}--repllama-v1-7b-lora-passage/${shard}.pkl \
+    --depth 1000 \
+    --batch_size 128 \
+    --save_text \
+    --save_ranking_to ./data/procis/runs/${run}_/${shard}.txt
+done
+
+python -m tevatron.scripts.reduce_results \
+--results_dir ./data/procis/runs/${run}_ \
+--output ./data/procis/runs/${run}_.txt \
+--depth 1000
+
+# convert to trec format
+python -m tevatron.utils.format.convert_result_to_trec \
+              --input ./data/procis/runs/${run}_.txt \
+              --output ./data/procis/runs/${run}.txt
+
+
+# evaluation
+    if [ "$s" = "test" ]; then
+      qrels_file="./data/procis/qrels/procis.${s}.qrels.turn-manual.txt"
+    else
+      qrels_file="./data/procis/qrels/procis.${s}.qrels.turn-link.txt"
+    fi
+    
+echo ${run} ${qrels_file}
+python -u evaluate_ranking.py \
+--run_dir ./data/procis/runs/${run}.txt \
+--qrels_dir ${qrels_file} \
+--rel_scale 1
+
+done
+done
+
+```
+
+#### WebDisc
+```bash
+
+gpuid=0 
+
+for prompt in his_cur2query his2query
+do
+
+llm="mistralai/Mistral-7B-Instruct-v0.3"
+llm_short="${llm##*/}"
+ckpt=webdisc.train.queries.${prompt}--${llm_short}--doct5query-100-q2d_q2c-rankllama512-1-raw
+step=1003
+q=${prompt}--${llm_short}--ckpt-${ckpt}-step-${step}
+
+
+for s in val test
+do
+
+q_len=64
+psg_len=512
+run=webdisc.${s}.run.${q}-${q_len}-psg${psg_len}--repllama-v1-7b-lora-passage.gpu 
+mkdir ./data/webdisc/runs/${run}_
+
+# query encoding
+CUDA_VISIBLE_DEVICES=${gpuid} \
+python -m tevatron.retriever.driver.encode \
+  --output_dir=./temp \
+  --model_name_or_path meta-llama/Llama-2-7b-hf \
+  --lora_name_or_path castorini/repllama-v1-7b-lora-passage \
+  --lora \
+  --query_prefix "query:" \
+  --passage_prefix "passage:" \
+  --bf16 \
+  --pooling eos \
+  --append_eos_token \
+  --normalize \
+  --encode_is_query \
+  --per_device_eval_batch_size 32 \
+  --query_max_len ${q_len} \
+  --passage_max_len ${psg_len} \
+  --dataset_path ./data/webdisc/queries/webdisc.${s}.queries.${q}.jsonl \
+  --dataset_config jsonl \
+  --encode_output_path ./data/webdisc/queries/webdisc.${s}.queries.${q}-${q_len}--repllama-v1-7b-lora-passage.pkl
+
+# search
+for shard in 0 1 2 3
+do
+CUDA_VISIBLE_DEVICES=${gpuid} \
+python -m tevatron.retriever.driver.search \
+    --query_reps ./data/webdisc/queries/webdisc.${s}.queries.${q}-${q_len}--repllama-v1-7b-lora-passage.pkl \
+    --passage_reps ./data/webdisc/indexes/webdisc.index.psg${psg_len}--repllama-v1-7b-lora-passage/${shard}.pkl \
+    --depth 1000 \
+    --batch_size 128 \
+    --save_text \
+    --save_ranking_to ./data/webdisc/runs/${run}_/${shard}.txt
+done
+
+
+python -m tevatron.scripts.reduce_results \
+--results_dir ./data/webdisc/runs/${run}_ \
+--output ./data/webdisc/runs/${run}_.txt \
+--depth 1000
+
+# convert to trec format
+python -m tevatron.utils.format.convert_result_to_trec \
+              --input ./data/webdisc/runs/${run}_.txt \
+              --output ./data/webdisc/runs/${run}.txt
+              
+
+# evaluation
+echo ${run} 
+python -u evaluate_ranking.py \
+--run_dir ./data/webdisc/runs/${run}.txt \
+--qrels_dir ./data/webdisc/qrels/webdisc.${s}.qrels.txt \
+--rel_scale 1
+
+done
+done
+```
+
 
 
 
