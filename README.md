@@ -14,7 +14,7 @@ This repository is structured into the following parts:
      - [2.2.3 Optimal query selection](#223-optimal-query-selection)
 3. [Learning to generate ad-hoc queries from conversations (training)](#3-learning-to-generate-ad-hoc-queries-from-conversations-training)
 4. [Generating ad-hoc queries for retrieval (inference)](#4-generating-ad-hoc-queries-for-retrieval-inference)
-5. [Reusing off-the-shelf ad-hoc retrievers](#5-reusing-off-the-shelf-ad-hoc-retrievers-training)
+5. [Reusing off-the-shelf ad-hoc retrievers](#5-reusing-off-the-shelf-ad-hoc-retrievers)
 6. [Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional)](#6-further-fine-tuning-ad-hoc-retrievers-using-filtered-ad-hoc-queries-optional)
 
 
@@ -1063,7 +1063,7 @@ Please follow the official repositories of [SPLADE++](https://github.com/naver/s
 
 We follow the negative sampling process of RepLLaMA to get hard negatives.
 
-After fine-tuning, please follow Section [Reusing off-the-shelf ad-hoc retrievers](#5-reusing-off-the-shelf-ad-hoc-retrievers-training) to do indexing and retrieval using the further fine-tuned checkpoints.
+After fine-tuning, please follow Section [Reusing off-the-shelf ad-hoc retrievers](#5-reusing-off-the-shelf-ad-hoc-retrievers) to do indexing and retrieval using the further fine-tuned checkpoints.
 
 ### 6.1 Negative generation
 
