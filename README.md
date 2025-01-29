@@ -14,7 +14,7 @@ This repository is structured into the following parts:
      - [2.2.3 Optimal query selection](#223-optimal-query-selection)
 3. [Learning to generate ad-hoc queries from conversations](#3-learning-to-generate-ad-hoc-queries-from-conversations)
 4. [Generating ad-hoc queries for retrieval (inference)](#4-generating-ad-hoc-queries-for-retrieval-inference)
-5. [Reusing off-the-shelf ad-hoc retrievers](#5-reusing-off-the-shelf-ad-hoc-retrievers)
+5. [Reusing off-the-shelf ad-hoc retrievers](#5-reusing-off-the-shelf-ad-hoc-retrievers-training)
 6. [Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional)](#6-further-fine-tuning-ad-hoc-retrievers-using-filtered-ad-hoc-queries-optional)
 
 
@@ -372,7 +372,7 @@ python query_filter.py \
 --num_chunks 4 --mode ${mode}
 ```
 
-## 🚀 3. Learning to generate ad-hoc queries from conversations <a name="3-learning-to-generate-ad-hoc-queries-from-conversations"></a>
+## 🚀 3. Learning to generate ad-hoc queries from conversations (training)<a name="3-learning-to-generate-ad-hoc-queries-from-conversations-training"></a>
 
 We fine-tune an LLM to learn the mapping raw conversational context to its optimal ad-hoc query target.
 We use DeepSpeed to enable multi-GPU training.
@@ -663,7 +663,6 @@ python -m pyserini.encode \
           --batch 128 \
           --max-length 512 \
           > webdisc.index.ance-msmarco-passage.log 2>&1 &
-
 ```
 
 ### 5.2 RepLLaMA indexing
@@ -977,7 +976,6 @@ python -u evaluate_ranking.py \
 
 done
 done
-
 ```
 
 #### WebDisc
@@ -1048,7 +1046,6 @@ python -m tevatron.utils.format.convert_result_to_trec \
               --input ./data/webdisc/runs/${run}_.txt \
               --output ./data/webdisc/runs/${run}.txt
               
-
 # evaluation
 echo ${run} 
 python -u evaluate_ranking.py \
@@ -1060,50 +1057,170 @@ done
 done
 ```
 
-
-
 ## 🎨 6. Further fine-tuning ad-hoc retrievers using filtered ad-hoc queries (optional) <a name="6-further-fine-tuning-ad-hoc-retrievers-using-filtered-ad-hoc-queries-optional"></a>
+In this section we show an example of fine-tuning RepLLaMA via [Tevatron](https://github.com/texttron/tevatron) using our generated ad-hoc queries.
+Please follow the official repositories of [SPLADE++](https://github.com/naver/splade) and [ANCE](https://github.com/microsoft/ANCE) to fine-tune them.
 
+We follow the negative sampling process of RepLLaMA to get hard negatives.
 
-### 6.1 RepLLaMA fine-tuning
+After fine-tuning, please follow Section [Reusing off-the-shelf ad-hoc retrievers](#5-reusing-off-the-shelf-ad-hoc-retrievers-training) to do indexing and retrieval using the further fine-tuned checkpoints.
+
+### 6.1 Negative generation
+
 #### ProCIS
+Run the following commands to obtain BM25 result lists for (1) conversational history only and (2) conversational history plus the current user utterance on the training set of ProCIS.
+Then, sample hard negatives and generate the final training data stored in the `./data/procis/training/`:
 ```bash
+# get BM25 result lists
+k1=0.9
+b=0.4
+nohup \
+python -m pyserini.search.lucene \
+ --topics ./data/procis/queries/procis.train-filtered1000.queries.his-cur.tsv \
+ --index ./data/procis/indexes/procis.index.bm25 \
+ --output ./data/procis/runs/procis.train-filtered1000.run.his-cur--bm25-k1-${k1}-b-${b}.txt \
+ --bm25 --hits 200 --k1 ${k1} --b ${b} --threads 16 --batch-size 128 \
+> procis.train-filtered1000.his-cur--bm25.log 2>&1 &
 
+nohup \
+python -m pyserini.search.lucene \
+ --topics ./data/procis/queries/procis.train-filtered1000.queries.his.tsv \
+ --index ./data/procis/indexes/procis.index.bm25 \
+ --output ./data/procis/runs/procis.train-filtered1000.run.his--bm25-k1-${k1}-b-${b}.txt \
+ --bm25 --hits 200 --k1 ${k1} --b ${b} --threads 16 --batch-size 128 \
+> procis.train-filtered1000.his--bm25.log 2>&1 &
 
+# get BM25's hard negatives and generate the final training data
+python -u preprocess_retriever_training.py \
+--corpus_dir ./data/procis/corpus/procis.corpus.jsonl/procis.corpus.jsonl \
+--query_dir ./data/procis/queries/procis.train-filtered1000.doct5query-100-q2d_q2c-rankllama512-1-concat.tsv \
+--qrels_dir ./data/procis/qrels/procis.train-filtered1000.qrels.turn-link.txt \
+--run1_dir ./data/procis/runs/procis.train-filtered1000.run.his--bm25-k1-${k1}-b-${b}.txt \
+--run2_dir ./data/procis/runs/procis.train-filtered1000.run.his-cur--bm25-k1-${k1}-b-${b}.txt \
+--output_dir ./data/procis/training/
 ```
 
 #### WebDisc
+Similarly, run the following commands to get BM25 result lists, sample hard negatives, and generate the final training data for WebDisc.
+The final generated training data will be stored in`./data/webdisc/training/`:
 ```bash
+# get BM25 result lists
+k1=8
+b=0.99
+for q in his-cur
+do
+for s in train
+do
+python -m pyserini.search.lucene \
+ --stopwords ./data/webdisc/raw/stopwords.txt \
+ --topics ./data/webdisc/queries/webdisc.${s}.queries.${q}.tsv \
+ --index ./data/webdisc/indexes/webdisc.index.bm25 \
+ --output ./data/webdisc/runs/webdisc.${s}.run.${q}--bm25-k1-${k1}-b-${b}_remove_stopwords.txt \
+ --bm25 --hits 1000 --k1 ${k1} --b ${b} --threads 16 --batch-size 64
+done
+done 
 
+k1=7
+b=0.99
+for q in his
+do
+for s in train
+do
+python -m pyserini.search.lucene \
+ --stopwords ./data/webdisc/raw/stopwords.txt \
+ --topics ./data/webdisc/queries/webdisc.${s}.queries.${q}.tsv \
+ --index ./data/webdisc/indexes/webdisc.index.bm25 \
+ --output ./data/webdisc/runs/webdisc.${s}.run.${q}--bm25-k1-${k1}-b-${b}_remove_stopwords.txt \
+ --bm25 --hits 1000 --k1 ${k1} --b ${b} --threads 16 --batch-size 64
+done
+done
 
+# get BM25's hard negatives
+python -u preprocess_retriever_training.py \
+--corpus_dir ./data/webdisc/corpus/webdisc.corpus-tevatron.jsonl \
+--query_dir ./data/webdisc/queries/webdisc.train.doct5query-100-q2d_q2c-rankllama512-1-concat.tsv \
+--qrels_dir ./data/webdisc/qrels/webdisc.train.qrels.txt \
+--run1_dir ./data/webdisc/runs/webdisc.train.run.his--bm25-k1-7-b-0.99_remove_stopwords.txt \
+--run2_dir ./data/webdisc/runs/webdisc.train.run.his-cur--bm25-k1-8-b-0.99_remove_stopwords.txt \
+--output_dir ./data/webdisc/training/
 ```
 
-### 6.2 RepLLaMA Indexing
+### 6.2 Further fine-tuning RepLLaMA
+
+Please run the following command to further fine-tune RepLLaMA using our generated ad-hoc queries on the training set of ProCIS:
 #### ProCIS
 ```bash
+q_len=64
+psg_len=256
 
-
+nohup \
+deepspeed --include localhost:0,1,2,3 --master_port 60000 \
+--module tevatron.retriever.driver.train \
+  --deepspeed ./deepspeed/ds_zero3_config.json \
+  --output_dir ./checkpoints/procis.train-filtered1000.doct5query-100-q2d_q2c-rankllama512-1-concat${q_len}-psg${psg_len}-Llama-2-7b-hf-repllama-v1-7b-lora-passage--neg20 \
+  --model_name_or_path meta-llama/Llama-2-7b-hf \
+  --lora_name_or_path castorini/repllama-v1-7b-lora-passage \ # make sure RepLLaMA has been initialised by the checkpoint pre-trained on MS MARCO
+  --lora \
+  --lora_target_modules q_proj,k_proj,v_proj,o_proj,down_proj,up_proj,gate_proj \
+  --save_steps 50 \
+  --dataset_name json \
+  --dataset_path ./data/procis/training/procis.train-filtered1000.doct5query-100-q2d_q2c-rankllama512-1-concat--neg20.jsonl \
+  --query_prefix "query: " \
+  --passage_prefix "passage: " \
+  --bf16 \
+  --pooling eos \
+  --append_eos_token \
+  --normalize \
+  --temperature 0.01 \
+  --per_device_train_batch_size 8 \
+  --gradient_checkpointing \
+  --train_group_size 16 \
+  --learning_rate 1e-4 \
+  --query_max_len ${q_len} \
+  --passage_max_len ${psg_len} \
+  --num_train_epochs 1 \
+  --logging_steps 10 \
+  --overwrite_output_dir \
+  --gradient_accumulation_steps 4 \
+  --lora_r 32 \
+  > procis.train-filtered1000.doct5query-100-q2d_q2c-rankllama512-1-concat${q_len}-psg${psg_len}-Llama-2-7b-hf-repllama-v1-7b-lora-passage--neg20.log 2>&1 &
 ```
 
 #### WebDisc
+Please run the following command to further fine-tune RepLLaMA using our generated ad-hoc queries on the training set of WebDisc:
 ```bash
+q_len=64
+psg_len=512
 
-
+nohup \
+deepspeed --include localhost:0,1,2,3 --master_port 60001 \
+--module tevatron.retriever.driver.train \
+  --deepspeed ./deepspeed/ds_zero3_config.json \
+  --output_dir ./checkpoints/webdisc.train.doct5query-100-q2d_q2c-rankllama512-1-concat64-psg256-Llama-2-7b-hf-repllama-v1-7b-lora-passage--neg20 \
+  --model_name_or_path meta-llama/Llama-2-7b-hf \
+  --lora_name_or_path castorini/repllama-v1-7b-lora-passage \ # make sure RepLLaMA has been initialised by the checkpoint pre-trained on MS MARCO
+  --lora \
+  --lora_target_modules q_proj,k_proj,v_proj,o_proj,down_proj,up_proj,gate_proj \
+  --save_steps 50 \
+  --dataset_name json \
+  --dataset_path ./data/webdisc/training/webdisc.train.doct5query-100-q2d_q2c-rankllama512-1-concat--neg20.jsonl \
+  --query_prefix "query: " \
+  --passage_prefix "passage: " \
+  --bf16 \
+  --pooling eos \
+  --append_eos_token \
+  --normalize \
+  --temperature 0.01 \
+  --per_device_train_batch_size 8 \
+  --gradient_checkpointing \
+  --train_group_size 16 \
+  --learning_rate 1e-4 \
+  --query_max_len ${q_len} \
+  --passage_max_len ${psg_len} \
+  --num_train_epochs 1 \
+  --logging_steps 10 \
+  --overwrite_output_dir \
+  --gradient_accumulation_steps 4 \
+  --lora_r 32 \
+  > webdisc.train.doct5query-100-q2d_q2c-rankllama512-1-concat${q_len}-psg${psg_len}-Llama-2-7b-hf-repllama-v1-7b-lora-passage--neg20.log 2>&1 &
 ```
-
-### 6.3 RepLLaMA retrieval and evaluation
-#### ProCIS
-```bash
-
-
-```
-
-#### WebDisc
-```bash
-
-
-```
-
-
-
-
