@@ -1,6 +1,16 @@
 # Conv2Query
 
-This is the repository for the paper titled **Bridging the Gap: From Ad-hoc to Proactive Search in Conversations**.
+This is the repository for the paper titled **Bridging the Gap: From Ad-hoc to Proactive Search in Conversations**, which has been accepted as a full paper at the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2025).
+
+We kindly ask you to cite our paper if you find this repository useful: 
+```
+@inproceedings{meng2025bridging,
+  title={Bridging the Gap: From Ad-hoc to Proactive Search in Conversations},
+  author={Meng, Chuan and Tonolini, Francesco and Mo, Fengran and Aletras, Nikolaos and Yilmaz, Emine and Kazai, Gabriella},
+  booktitle={Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+  year={2025}
+}
+```
 
 This repository is structured into the following parts:
 1. [Prerequisites](#1-prerequisites)
